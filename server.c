@@ -147,6 +147,7 @@ void *get_connection(void *arg){
 	}
 	//log in
 	else if(menu == '2'){
+		update_info((Arg *)arg,ac);
 		ret = login(ac);
 		if(ret == 0){
 			write(((Arg *)arg)->sock,"0\n",2);
@@ -169,14 +170,15 @@ void *get_connection(void *arg){
 	}
 }
 
+//check heartbit
 int client_stat(Arg *arg, char *ID){
 	char stat;
 	char query[100] = "";
 	int ret;
 	while(1){
 		read(((Arg *)arg)->sock, &stat, 1);
-		if(stat == '0'){
-			sprintf(query,"update table status set stat \'%c\' where ID = %s;",stat, ID);
+		if(stat == '1'){
+			sprintf(query,"update status set stat = \'%c\' where ID = \'%s\';",stat, ID);
 			ret = mysql_query(conn,query);
 			memset(query,0x00,100);
 			if(ret != 0){
@@ -184,16 +186,21 @@ int client_stat(Arg *arg, char *ID){
 				return -1;
 			}
 		}
+		else if(stat == '2'){}
 		else{
-			sprintf(query,"update table status set stat \'%c\' where ID = %s;",stat, ID);
+			sprintf(query,"update status set stat = \'%c\' where ID = \'%s\';",stat, ID);
 			ret = mysql_query(conn, query);
 			memset(query,0x00,100);
 			if(ret != 0){
 				printf("Cannot update stat=1\n");
 				return -1;
 			}
+			printf("connection endded\n");
+			close(((Arg *)arg)->sock);
+			break;
 		}
 	}
+	return 0;
 }
 
 void update_info(Arg *arg, account *ac){
@@ -203,7 +210,7 @@ void update_info(Arg *arg, account *ac){
     sprintf(port,"%d",ntohs(arg->client_sock.sin_port));
     char query[100]="";
 
-    complete_query_select(query,ac->Name);
+    complete_query_select(query,ac->ID);
     if(mysql_query(conn,query) != 0){
 		perror("mysql_query error ");
 		return ;
@@ -235,7 +242,7 @@ int create_account(account *ac){
 			sprintf(query,"insert into login values(\'%s\', \'%s\', \'%s\');",ac->Name, ac->ID,ac->pswd);
 			mysql_query(conn,query);
 			memset(query,0x00,100);
-			sprintf(query,"insert into status values(\'%s\', '1');",ac->ID);
+			sprintf(query,"insert into status values(\'%s\', '0');",ac->ID);
 			mysql_query(conn,query);
 			ret = 0;
 		}
@@ -263,7 +270,7 @@ int login(account *ac){
 		if(strcmp(ac->pswd,row[0])==0){
 			mysql_free_result(res);
 			memset(query,0x00,100);
-			sprintf(query,"update login set status = 1 where ID = '%s' and pswd = '%s';",ac->ID,ac->pswd);
+			sprintf(query,"update status set stat = \'1\' where ID = \'%s\';",ac->ID);
 			ret = 2;
 		}
 		else{
@@ -307,4 +314,8 @@ void complete_query_insert(char *query, char *ID, char *IP, char *port){
 void complete_query_update(char *query, char *ID, char *IP, char *port){
     memset(query,0x00,100);
     sprintf(query,"update client set IP = \'%s\',port = \'%s\' where ID = \'%s\';",IP,port,ID);
+}
+
+void *sig_handler(int signo){
+
 }
