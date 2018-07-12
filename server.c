@@ -1,4 +1,5 @@
 #include <sys/types.h>
+#include <sys/time.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
@@ -25,7 +26,7 @@ typedef struct _ACCOUNT{
 	char pswd[30];
 }account;
 
-typedef struct _arg{
+typedef struct _ARG{
     int sock;
     struct sockaddr_in client_sock;
 }Arg;
@@ -35,6 +36,7 @@ Arg **arg;
 void *get_connection(void *);
 void *get_info(void *);
 int login(account *);
+int logout(char *);
 int client_stat(Arg *, char *);
 int create_account(account *);
 void update_info(Arg *,account *);
@@ -47,13 +49,14 @@ MYSQL *conn;
 MYSQL_RES *res;
 MYSQL_ROW row;
 
+pthread_mutex_t a_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 
 int main(int argc, char *argv[]){
     int server_sock;
     int client_sock;
 
 	int con_index = 0;
-
 
     pthread_t conn_thread[CONN_MAX];
     pthread_t info_thread;
@@ -67,7 +70,6 @@ int main(int argc, char *argv[]){
     sock_addr.sin_family = AF_INET;
     sock_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     sock_addr.sin_port = htons(atoi(argv[1]));
-
 
     arg = malloc(sizeof(Arg *)*CONN_MAX);
 
@@ -94,9 +96,13 @@ int main(int argc, char *argv[]){
 	exit(0);
     }
 
+	_Bool optval = 1;
+	setsockopt(server_sock, SOL_SOCKET,SO_REUSEADDR,(char *)&optval,sizeof(optval));
+
     printf("connection ready\n");
 
     while(1){
+
     	if((client_sock = accept(server_sock, (struct sockaddr *) &client_addr, &size)) <0){
 		perror("accept error ");
 		exit(0);
@@ -110,6 +116,8 @@ int main(int argc, char *argv[]){
 	    pthread_create(&conn_thread[con_index],NULL,get_connection,(void *)arg[con_index]);
 		con_index++;
     }
+	int i=0;
+	free(arg);
     mysql_close(conn);
     close(server_sock);
 }
@@ -122,7 +130,10 @@ void *get_connection(void *arg){
 
     read(((Arg *)arg)->sock, &menu, 1);
 
-	read(((Arg *)arg)->sock, tmp, sizeof(account));
+	if(read(((Arg *)arg)->sock, tmp, sizeof(account))==0){
+		printf("Conncetion Cancled\n");
+		return (void *)0;
+	}
 	if(menu == '1'){
 		strcpy(ac->Name,strtok(tmp, " "));
 		strcpy(ac->ID,strtok(NULL," "));
@@ -159,48 +170,86 @@ void *get_connection(void *arg){
 			write(((Arg *)arg)->sock,"2\n",2);
 		}
 		if((ret != 0) || (ret != 1)){
-			if(client_stat(arg, ac->ID)==-1){
-				return (void *)-1;
+			if(client_stat(arg, ac->ID)==0){
+				printf("Connection ended\n");
 			}
 		}
+		close(((Arg *)arg)->sock);
 	}
-	//log out
-	else if(menu == '3'){
-
-	}
+	free(ac);
+	free((Arg *)arg);
 }
 
 //check heartbit
 int client_stat(Arg *arg, char *ID){
-	char stat;
+	char stat = -1;
 	char query[100] = "";
 	int ret;
+	int tmp;
+	struct timeval tv;
+
+	tv.tv_sec = 6;
+	tv.tv_usec = 50;
+	setsockopt(((Arg *)arg)->sock,SOL_SOCKET, SO_RCVTIMEO,(const char*)&tv,sizeof(tv));
+
 	while(1){
-		read(((Arg *)arg)->sock, &stat, 1);
+		if((tmp = read(((Arg *)arg)->sock, &stat, 1)) == -1){
+			return logout(ID);
+		}
+		//alive
 		if(stat == '1'){
 			sprintf(query,"update status set stat = \'%c\' where ID = \'%s\';",stat, ID);
+			pthread_mutex_lock(&a_mutex);
 			ret = mysql_query(conn,query);
+			pthread_mutex_unlock(&a_mutex);
 			memset(query,0x00,100);
 			if(ret != 0){
 				printf("Cannot update stat=0\n");
 				return -1;
 			}
-		}
-		else if(stat == '2'){}
-		else{
-			sprintf(query,"update status set stat = \'%c\' where ID = \'%s\';",stat, ID);
-			ret = mysql_query(conn, query);
+    		sprintf(query,"update client set IP = \'%s\',port = \'%d\' where ID = \'%s\';",inet_ntoa(arg->client_sock.sin_addr),ntohs(arg->client_sock.sin_port),ID);
+			pthread_mutex_lock(&a_mutex);
+			ret = mysql_query(conn,query);
+			pthread_mutex_unlock(&a_mutex);
 			memset(query,0x00,100);
 			if(ret != 0){
-				printf("Cannot update stat=1\n");
+				printf("Cannot update stat = 0-2\n");
 				return -1;
 			}
-			printf("connection endded\n");
-			close(((Arg *)arg)->sock);
+			printf("HB %d\n",((Arg *)arg)->sock);
+		}
+		//error
+		else if(stat == -1){
+			memset(query,0x00,100);
+			printf("client down\n");
+			sprintf(query,"update status set stat = \'%c\' where ID = \'%s\';",stat,ID);
+			pthread_mutex_lock(&a_mutex);
+			ret = mysql_query(conn,query);
+			pthread_mutex_unlock(&a_mutex);
+			if(ret != 0){
+				printf("Cannot update stat = 2\n");
+				return -1;
+			}
 			break;
 		}
+		stat = -1;
+		tmp = 0;
 	}
 	return 0;
+}
+
+int logout(char *ID){
+	pthread_mutex_lock(&a_mutex);
+	char query[100] = "";
+	int ret;
+	sprintf(query,"update status set stat = \'0\' where ID = \'%s\';",ID);
+	ret = mysql_query(conn,query);
+	if(ret != 0)
+		printf("logout failed %s\n",ID);
+	else
+		printf("logout!\n");
+	pthread_mutex_unlock(&a_mutex);
+	return ret;
 }
 
 void update_info(Arg *arg, account *ac){
@@ -211,8 +260,10 @@ void update_info(Arg *arg, account *ac){
     char query[100]="";
 
     complete_query_select(query,ac->ID);
+	pthread_mutex_lock(&a_mutex);
     if(mysql_query(conn,query) != 0){
 		perror("mysql_query error ");
+		pthread_mutex_unlock(&a_mutex);
 		return ;
     }
     else{
@@ -227,6 +278,7 @@ void update_info(Arg *arg, account *ac){
 		}
     }
     mysql_free_result(res);
+	pthread_mutex_unlock(&a_mutex);
 }
 
 int create_account(account *ac){
@@ -234,7 +286,7 @@ int create_account(account *ac){
 	int ret;
 	memset(query,0x00,100);
 	sprintf(query,"select ID from login where ID = '%s';",ac->ID);
-
+	pthread_mutex_lock(&a_mutex);
 	if(mysql_query(conn,query)==0){
 		res = mysql_store_result(conn);
 		if(res->row_count == 0){
@@ -250,6 +302,7 @@ int create_account(account *ac){
 			ret = 1;
 	}
 	mysql_free_result(res);
+	pthread_mutex_unlock(&a_mutex);
 	return ret;
 }
 
@@ -258,7 +311,8 @@ int login(account *ac){
 	int ret;
 	memset(query,0x00,100);
 	sprintf(query,"select pswd from login where ID = '%s';",ac->ID);
-
+	
+	pthread_mutex_lock(&a_mutex);
 	mysql_query(conn,query);
 	res = mysql_store_result(conn);
 	if(res->row_count == 0){
@@ -278,6 +332,7 @@ int login(account *ac){
 			ret = 1;
 		}
 	}
+	pthread_mutex_unlock(&a_mutex);
 	return ret;
 }
 
@@ -314,8 +369,4 @@ void complete_query_insert(char *query, char *ID, char *IP, char *port){
 void complete_query_update(char *query, char *ID, char *IP, char *port){
     memset(query,0x00,100);
     sprintf(query,"update client set IP = \'%s\',port = \'%s\' where ID = \'%s\';",IP,port,ID);
-}
-
-void *sig_handler(int signo){
-
 }
