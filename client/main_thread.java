@@ -13,8 +13,6 @@ public class main_thread {
 	private static Socket conn;
 	private static int port;
 	private static String ID;
-	private static String pswd;
-	private static String Name;
 	private static int status;
 	
 		public static void main(String[] args) throws Exception{
@@ -57,22 +55,10 @@ public class main_thread {
 				}
 				
 				else if(menu == 4) {
+					String IP = null;
 					System.out.println("원하는 ID를 입력하세요\n");
 					ID = in.nextLine();
-					status = gi.reqStat(ID);
-					if(status == 1) { 
-						System.out.println("로그인 중\n");
-					}
-					else if(status == 0) {
-						System.out.println("로그아웃 상태");
-					}
-					else if(status == 2) {
-						System.out.println("존재하지 않는 사용자입니다");						
-					}
-					else {
-						System.out.println("서버 오류");
-						return;
-					}
+					IP = gi.reqStat(ID);
 				}
 			}
 		}

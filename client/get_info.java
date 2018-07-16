@@ -10,10 +10,8 @@ import java.io.PrintWriter;
 
 public class get_info {
 	private Socket client;
-	private Socket beat;
 	private BufferedReader in;
 	private PrintWriter out;
-	private PrintWriter beat_out;
 	private int port;
 	private String ID, pswd;
 	private static heartbeat hb;
@@ -50,7 +48,6 @@ public class get_info {
 			hb = new heartbeat(isa);
 			hb.start();
 			System.out.println("Login");
-			
 		}
 		return stat;
 	}
@@ -67,12 +64,26 @@ public class get_info {
 		System.out.println("정상적으로 로그아웃 되었습니다");
 	}
 	
-	public int reqStat(String ID) throws Exception {
+	public String reqStat(String ID) throws Exception {
 		String stat = null;
 		out.print('0'+ID);
 		out.flush();
 		stat = in.readLine();
-		return Integer.parseInt(stat);
+		if(stat.equals("1")) { 
+			stat = in.readLine();
+			System.out.println("IP = " + stat);
+		}
+		else if(stat.equals("0")) {
+			System.out.println("로그아웃 상태");
+		}
+		else if(stat.equals("2")) {
+			System.out.println("존재하지 않는 사용자입니다");						
+		}
+		else {
+			System.out.println("서버 오류");
+			stat = "-1";
+		}
+		return stat;
 	}
 	
 	public int create_account(String Name, String ID, String pswd) throws IOException{

@@ -242,6 +242,23 @@ void *get_connection(void *arg){
 				strcpy(text,row[0]);
 				strcat(text,"\n");
 				write(((Arg *)arg)->sock,text,strlen(text));
+				if(!strcmp(row[0],"1")){
+					memset(text,0x00,30);
+					memset(query,0x00,100);
+					sprintf(query,"select IP from client where ID = \'%s\';",reqID);
+					if(ret = mysql_query(conn,query)){
+						printf("Cannot select IP\n");
+						return (void *)-1;
+					}
+					res = mysql_store_result(conn);
+					if(res->row_count == 1){
+						row = mysql_fetch_row(res);
+						strcpy(text,row[0]);
+						strcat(text,"\n");
+						write(((Arg *)arg)->sock,text,strlen(text));
+						printf("export IP = %s\n",row[0]);
+					}
+				}
 				printf("export user info %s to %d\n",reqID,((Arg *)arg)->sock);
 			}
 			else{
