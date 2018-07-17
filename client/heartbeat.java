@@ -12,16 +12,11 @@ public class heartbeat extends Thread{
 	private PrintWriter beat_out;
 	private Socket beat;
 	private char stat = '1';
-	// stat 1 = active, 0 = logout 2 = error
-	public heartbeat(InetSocketAddress isa) throws Exception { 
-		
-		beat = new Socket();
-		beat.setReuseAddress(true);
-		beat.connect(isa);
-		beat.setSoTimeout(0);
-		beat.setSoLinger(true, 0);
-		
-		beat_out = new PrintWriter(this.beat.getOutputStream(),true);
+
+	// stat 1 = active, 0 = logout 2 = error 3 = request
+	public heartbeat(Socket client, PrintWriter out, String port) throws Exception { 
+		beat = 	client;
+		beat_out = out;
 	}
 	
 	public void set_stat(char stat) {

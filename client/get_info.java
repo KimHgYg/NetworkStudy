@@ -27,6 +27,8 @@ public class get_info {
 		out = new PrintWriter(this.client.getOutputStream(),true);
 	}
 	
+	//통신 기본 포트는 30000으로 설정
+	//로그인 시 UDP_conn 먼저 실행 후 heartbeat로 포트 전달.
 	public int login(String ID, String pswd) throws Exception {
 		String status;
 		int stat;
@@ -45,7 +47,7 @@ public class get_info {
 			System.out.println("Wrong password");
 		}
 		else {
-			hb = new heartbeat(isa);
+			hb = new heartbeat(client, out, String.valueOf(port));
 			hb.start();
 			System.out.println("Login");
 		}
@@ -60,13 +62,14 @@ public class get_info {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		hb.join();
 		out.close();
 		System.out.println("정상적으로 로그아웃 되었습니다");
 	}
 	
 	public String reqStat(String ID) throws Exception {
 		String stat = null;
-		out.print('0'+ID);
+		out.print('3' + "" +'0' + "" + ID);
 		out.flush();
 		stat = in.readLine();
 		if(stat.equals("1")) { 

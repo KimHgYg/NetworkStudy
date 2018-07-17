@@ -27,8 +27,9 @@ typedef struct _ACCOUNT{
 }account;
 
 typedef struct _ARG{
-    int sock;
-    struct sockaddr_in client_sock;
+	int sock;
+	struct sockaddr_in client_sock;
+	char *port;
 }Arg;
 
 typedef struct _HB_ARg{
@@ -42,7 +43,8 @@ HB **hb;
 
 
 void *get_connection(void *);
-void *heart_beat(void *);
+void heart_beat(Arg *, char *);
+void req(Arg *);
 
 int login(account *);
 int logout(char *);
@@ -72,69 +74,75 @@ int hb_index;
 int server_sock;
 
 int main(int argc, char *argv[]){
-    int client_sock;
+	int client_sock;
 
-    struct sockaddr_in sock_addr;
-    struct sockaddr_in client_addr;
-    int size = sizeof(struct sockaddr_in);
-    memset(&client_addr, 0x00, size);
-    memset(&sock_addr,0x00,size);
+	struct sockaddr_in sock_addr;
+	struct sockaddr_in client_addr;
+	int size = sizeof(struct sockaddr_in);
+	memset(&client_addr, 0x00, size);
+	memset(&sock_addr,0x00,size);
 
-    sock_addr.sin_family = AF_INET;
-    sock_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    sock_addr.sin_port = htons(atoi(argv[1]));
+	sock_addr.sin_family = AF_INET;
+	sock_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	sock_addr.sin_port = htons(atoi(argv[1]));
 
-    arg = malloc(sizeof(Arg *)*CONN_MAX);
+	arg = malloc(sizeof(Arg *)*CONN_MAX);
 	hb = malloc(sizeof(HB *)*CONN_MAX);
 
-    char *msg;
+	char *msg;
 
-    if(argc != 2){
-	fprintf(stderr,"<usage> : server_java.out \"port number\"\n");
-	exit(0);
-    }
-    init_mysql();
+	if(argc != 2){
+		fprintf(stderr,"<usage> : server_java.out \"port number\"\n");
+		exit(0);
+	}
+	init_mysql();
 
-    if((server_sock = socket(AF_INET,SOCK_STREAM,0)) == -1){
-	perror("socket error ");
-	exit(0);
-    }
+	if((server_sock = socket(AF_INET,SOCK_STREAM,0)) == -1){
+		perror("socket error ");
+		exit(0);
+	}
 
-    if(bind(server_sock,(struct sockaddr *)&sock_addr , size) == -1){
-	perror("bind error ");
-	exit(0);
-    }
+	if(bind(server_sock,(struct sockaddr *)&sock_addr , size) == -1){
+		perror("bind error ");
+		exit(0);
+	}
 
-    if(listen(server_sock, 5) == -1){
-	perror("listen error ");
-	exit(0);
-    }
+	if(listen(server_sock, 5) == -1){
+		perror("listen error ");
+		exit(0);
+	}
 
 	_Bool optval = 1;
 	setsockopt(server_sock, SOL_SOCKET,SO_REUSEADDR,(char *)&optval,sizeof(optval));
 
-    printf("connection ready\n");
+	printf("connection ready\n");
 
-    while(1){
-    	if((client_sock = accept(server_sock, (struct sockaddr *) &client_addr, &size)) <0){
+	while(1){
+		if((client_sock = accept(server_sock, (struct sockaddr *) &client_addr, &size)) <0){
 			perror("accept error ");
 			exit(0);
-	    }
+		}
+		//Add UDP connection hear
 
-	    printf("client connected\n");
+
+		printf("client connected\n");
 		arg[con_index] = malloc(sizeof(Arg));
-	    arg[con_index]->sock = client_sock;
-	    arg[con_index]->client_sock = client_addr;
-	
-	    pthread_create(&conn_thread[con_index],NULL,get_connection,(void *)arg[con_index]);
+		arg[con_index]->port = malloc(sizeof(7));
+		arg[con_index]->sock = client_sock;
+		arg[con_index]->client_sock = client_addr;
+
+		//Add port update hear
+
+
+		pthread_create(&conn_thread[con_index],NULL,get_connection,(void *)arg[con_index]);
 
 		con_index++;
-		pthread_cond_wait(&conA, &server_sock_mutex);
-    }
+		//pthread_cond_wait(&conA, &server_sock_mutex);
+	}
 	int i=0;
 	free(arg);
-    mysql_close(conn);
-    close(server_sock);
+	mysql_close(conn);
+	close(server_sock);
 }
 
 void *get_connection(void *arg){
@@ -142,17 +150,17 @@ void *get_connection(void *arg){
 	int client_sock;
 	int size = sizeof(struct sockaddr_in);
 	char menu;
-    char tmp[100] = "";
+	char tmp[100] = "";
 
 	struct sockaddr_in client_addr;
-    memset(&client_addr,0x00,size);
+	memset(&client_addr,0x00,size);
 
 	account *ac = malloc(sizeof(account));
 
-    read(((Arg *)arg)->sock, &menu, 1);
+	read(((Arg *)arg)->sock, &menu, 1);
 
 	if(read(((Arg *)arg)->sock, tmp, sizeof(account))==0){
-		printf("Conncetion Cancled\n");
+		printf("Conncetion Canceled\n");
 		return (void *)0;
 	}
 	if(menu == '1'){
@@ -192,93 +200,82 @@ void *get_connection(void *arg){
 			write(((Arg *)arg)->sock,"2\n",2);
 		}
 		if((ret != 0) || (ret != 1)){ 
-			if((client_sock = accept(server_sock, (struct sockaddr *) &client_addr, &size)) <0){
-				perror("accept error2 ");
-				exit(0);
-		    }
-	
-		    printf("heart_beat connected%d to %d\n",((Arg *)arg)->sock,client_sock);
-			hb[hb_index] = malloc(sizeof(HB));
-			hb[hb_index]-> ID = malloc(30);
-		    hb[hb_index]->hb.sock = client_sock;
-		    hb[hb_index]->hb.client_sock = client_addr;
-			strcpy(hb[hb_index]->ID,ac->ID);
-	
-			pthread_create(&hb_thread[con_index],NULL,heart_beat,(void *)hb[hb_index]);
-			hb_index++;
+			heart_beat((Arg *)arg,ac->ID);
 		}
 		pthread_cond_signal(&conA);
-	}
-	//request opponent info
-	while(1){
-		char query[100] = "";
-		char reqID[30] = "";
-		char option = '0';
-		char text[30] = "";
-
-    	if(read(((Arg *)arg)->sock, &option, 1) == 0){
-			close(((Arg *)arg)->sock);
-			printf("server connection closed %d\n",((Arg *)arg)->sock);
-			return (void *)0;
-		}
-
-		if(option == '0'){
-			memset(query,0x00,30);
-			memset(text ,0x00,30);
-			if(read(((Arg *)arg)->sock,reqID,30) == 0){
-				printf("server connection closed %d\n",((Arg *)arg)->sock);
-				close(((Arg *)arg)->sock);
-				return (void *)0;
-			}
-			sprintf(query,"select stat from status where ID = \'%s\';",reqID);
-			pthread_mutex_lock(&a_mutex);
-			if((ret = mysql_query(conn,query)) != 0){
-				printf("Cannot select stat\n");
-				return (void *)-1;
-			}
-			res = mysql_store_result(conn);
-			if(res->row_count == 1){
-				row = mysql_fetch_row(res);
-				strcpy(text,row[0]);
-				strcat(text,"\n");
-				write(((Arg *)arg)->sock,text,strlen(text));
-				if(!strcmp(row[0],"1")){
-					memset(text,0x00,30);
-					memset(query,0x00,100);
-					sprintf(query,"select IP from client where ID = \'%s\';",reqID);
-					if(ret = mysql_query(conn,query)){
-						printf("Cannot select IP\n");
-						return (void *)-1;
-					}
-					res = mysql_store_result(conn);
-					if(res->row_count == 1){
-						row = mysql_fetch_row(res);
-						strcpy(text,row[0]);
-						strcat(text,"\n");
-						write(((Arg *)arg)->sock,text,strlen(text));
-						printf("export IP = %s\n",row[0]);
-					}
-				}
-				printf("export user info %s to %d\n",reqID,((Arg *)arg)->sock);
-			}
-			else{
-				write(((Arg *)arg)->sock,"2\n",2);
-				printf("export FAILED user info %s to %d\n",reqID,((Arg *)arg)->sock);
-			}
-			pthread_mutex_unlock(&a_mutex);
-		}
 	}
 	free(ac);
 	close(((Arg *)arg)->sock);
 	free((Arg *)arg);
 }
 
+void req(Arg *arg){
+	char query[100] = "";
+	char reqID[30] = "";
+	char option = '0';
+	char text[30] = "";
+	int ret;
+
+	if(read(((Arg *)arg)->sock, &option, 1) == 0){
+		close(((Arg *)arg)->sock);
+		printf("server connection closed %d\n",((Arg *)arg)->sock);
+		return (void)0;
+	}
+
+	if(option == '0'){
+		memset(query,0x00,30);
+		memset(text ,0x00,30);
+		if(read(((Arg *)arg)->sock,reqID,30) == 0){
+			printf("server connection closed %d\n",((Arg *)arg)->sock);
+			close(((Arg *)arg)->sock);
+			return (void)0;
+		}
+		sprintf(query,"select stat from status where ID = \'%s\';",reqID);
+		pthread_mutex_lock(&a_mutex);
+		if((ret = mysql_query(conn,query)) != 0){
+			printf("Cannot select stat\n");
+			return (void)-1;
+		}
+		res = mysql_store_result(conn);
+		if(res->row_count == 1){
+			row = mysql_fetch_row(res);
+			strcpy(text,row[0]);
+			strcat(text,"\n");
+			write(((Arg *)arg)->sock,text,strlen(text));
+			if(!strcmp(row[0],"1")){
+				memset(text,0x00,30);
+				memset(query,0x00,100);
+				sprintf(query,"select IP from client where ID = \'%s\';",reqID);
+				if(ret = mysql_query(conn,query)){
+					printf("Cannot select IP\n");
+					return (void)-1;
+				}
+				res = mysql_store_result(conn);
+				if(res->row_count == 1){
+					row = mysql_fetch_row(res);
+					strcpy(text,row[0]);
+					strcat(text,"\n");
+					write(((Arg *)arg)->sock,text,strlen(text));
+					printf("export IP = %s\n",row[0]);
+				}
+			}
+			printf("export user info %s to %d\n",reqID,((Arg *)arg)->sock);
+		}
+		else{
+			write(((Arg *)arg)->sock,"2\n",2);
+			printf("export FAILED user info %s to %d\n",reqID,((Arg *)arg)->sock);
+		}
+		pthread_mutex_unlock(&a_mutex);
+}
+}
 //check heartbit
 int client_stat(Arg *hb, char *ID){
 	char stat = -1;
 	char query[100] = "";
+	char port[7] = "";
 	int ret;
 	int tmp;
+	char len;
 	struct timeval tv;
 
 	tv.tv_sec = 6;
@@ -291,16 +288,20 @@ int client_stat(Arg *hb, char *ID){
 		}
 		//alive
 		if(stat == '1'){
+			read(((Arg *)hb)->sock, &len, 1);
+			read(((Arg *)hb)->sock, port, (int)(len-'0'));
 			sprintf(query,"update status set stat = \'%c\' where ID = \'%s\';",stat, ID);
 			pthread_mutex_lock(&a_mutex);
 			ret = mysql_query(conn,query);
 			pthread_mutex_unlock(&a_mutex);
 			memset(query,0x00,100);
+			memset(port,0x00,7);
 			if(ret != 0){
 				printf("Cannot update stat=0\n");
 				return -1;
 			}
-    		sprintf(query,"update client set IP = \'%s\',port = \'%d\' where ID = \'%s\';",inet_ntoa(hb->client_sock.sin_addr),ntohs(hb->client_sock.sin_port),ID);
+			strcpy(port,hb->port);
+			sprintf(query,"update client set IP = \'%s\',port = \'%s\' where ID = \'%s\';",inet_ntoa(hb->client_sock.sin_addr),port,ID);
 			pthread_mutex_lock(&a_mutex);
 			ret = mysql_query(conn,query);
 			pthread_mutex_unlock(&a_mutex);
@@ -325,6 +326,9 @@ int client_stat(Arg *hb, char *ID){
 			}
 			break;
 		}
+		else if(stat == '3'){
+			req(hb);
+		}
 		stat = 0;
 		tmp = 0;
 	}
@@ -346,20 +350,20 @@ int logout(char *ID){
 }
 
 void update_info(Arg *arg, account *ac){
-//get client table info;
+	//get client table info;
 	char *IP = inet_ntoa(arg->client_sock.sin_addr);
-    char port[6]="";
-    sprintf(port,"%d",ntohs(arg->client_sock.sin_port));
-    char query[100]="";
+	char port[6]="";
+	sprintf(port,"%d",ntohs(arg->client_sock.sin_port));
+	char query[100]="";
 
-    complete_query_select(query,ac->ID);
+	complete_query_select(query,ac->ID);
 	pthread_mutex_lock(&a_mutex);
-    if(mysql_query(conn,query) != 0){
+	if(mysql_query(conn,query) != 0){
 		perror("mysql_query error ");
 		pthread_mutex_unlock(&a_mutex);
 		return ;
-    }
-    else{
+	}
+	else{
 		res = mysql_store_result(conn);
 		if(res->row_count == 0){
 			complete_query_insert(query, ac->ID, IP, port);
@@ -369,8 +373,8 @@ void update_info(Arg *arg, account *ac){
 			complete_query_update(query, ac->ID, IP, port);
 			mysql_query(conn,query);
 		}
-    }
-    mysql_free_result(res);
+	}
+	mysql_free_result(res);
 	pthread_mutex_unlock(&a_mutex);
 }
 
@@ -404,7 +408,7 @@ int login(account *ac){
 	int ret;
 	memset(query,0x00,100);
 	sprintf(query,"select pswd from login where ID = '%s';",ac->ID);
-	
+
 	pthread_mutex_lock(&a_mutex);
 	mysql_query(conn,query);
 	res = mysql_store_result(conn);
@@ -430,42 +434,42 @@ int login(account *ac){
 }
 
 void init_mysql(){
-    if(!(conn = mysql_init((MYSQL *)NULL))){
-	perror("mysql_init error ");
-	exit(1);
-    }
-    
-    if(mysql_real_connect(conn,SERVER,USER,PASS,NULL,PORT,NULL,0) == NULL){
-	fprintf(stderr,"mysql_real_connect error : %s\n",mysql_error(conn));
-	exit(1);
-    }
+	if(!(conn = mysql_init((MYSQL *)NULL))){
+		perror("mysql_init error ");
+		exit(1);
+	}
 
-    if(mysql_select_db(conn,NAME) != 0){
-	mysql_close(conn);
-	perror("mysql_select_db error ");
-	exit(1);
-    }
+	if(mysql_real_connect(conn,SERVER,USER,PASS,NULL,PORT,NULL,0) == NULL){
+		fprintf(stderr,"mysql_real_connect error : %s\n",mysql_error(conn));
+		exit(1);
+	}
 
-    printf("mysql_initiated\n");
+	if(mysql_select_db(conn,NAME) != 0){
+		mysql_close(conn);
+		perror("mysql_select_db error ");
+		exit(1);
+	}
+
+	printf("mysql_initiated\n");
 }
 
 void complete_query_select(char *query, char *ID){
-    memset(query,0x00,100);
-    sprintf(query,"select ID, IP, port from client where ID = \'%s\';",ID);
+	memset(query,0x00,100);
+	sprintf(query,"select ID, IP, port from client where ID = \'%s\';",ID);
 }
 
 void complete_query_insert(char *query, char *ID, char *IP, char *port){
-    memset(query,0x00,100);
-    sprintf(query,"insert into client(ID, IP, port) values(\'%s\',\'%s\',\'%s\');",ID,IP,port);
+	memset(query,0x00,100);
+	sprintf(query,"insert into client(ID, IP, port) values(\'%s\',\'%s\',\'%s\');",ID,IP,port);
 }
 
 void complete_query_update(char *query, char *ID, char *IP, char *port){
-    memset(query,0x00,100);
-    sprintf(query,"update client set IP = \'%s\',port = \'%s\' where ID = \'%s\';",IP,port,ID);
+	memset(query,0x00,100);
+	sprintf(query,"update client set IP = \'%s\',port = \'%s\' where ID = \'%s\';",IP,port,ID);
 }
 
-void *heart_beat(void *hb){
-	client_stat(&(((HB *)hb)->hb),((HB *)hb)->ID);
-	close(((HB *)hb)->hb.sock);
-	printf("connection endded%d\n",((HB *)hb)->hb.sock);
+void heart_beat(Arg *arg, char *ID){
+	client_stat(arg,ID);
+	close(arg->sock);
+	printf("connection endded%d\n",arg->sock);
 }
