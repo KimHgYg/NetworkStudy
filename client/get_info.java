@@ -15,8 +15,12 @@ public class get_info {
 	private int port;
 	private String ID, pswd;
 	private static heartbeat hb;
+	private static UDP_conn udp;
+	private String serverIP;
 	private InetSocketAddress isa;
-	public get_info(InetAddress addr, int port) throws IOException {
+	private InetAddress addr;
+	
+	public get_info(InetAddress addr, int port, String serverIP) throws IOException {
 		isa = new InetSocketAddress(addr, port);
 		client = new Socket();
 		client.setReuseAddress(true);
@@ -25,6 +29,9 @@ public class get_info {
 		client.setSoLinger(true, 0);
 		in = new BufferedReader(new InputStreamReader(this.client.getInputStream()));
 		out = new PrintWriter(this.client.getOutputStream(),true);
+		
+		this.addr = addr;
+		this.serverIP = serverIP;
 	}
 	
 	//통신 기본 포트는 30000으로 설정
@@ -47,9 +54,13 @@ public class get_info {
 			System.out.println("Wrong password");
 		}
 		else {
-			hb = new heartbeat(client, out, String.valueOf(port));
+			udp= new UDP_conn(addr);
+			
+			hb = new heartbeat(udp, out, in, addr);
 			hb.start();
+
 			System.out.println("Login");
+			
 		}
 		return stat;
 	}
@@ -69,12 +80,15 @@ public class get_info {
 	
 	public String reqStat(String ID) throws Exception {
 		String stat = null;
+		String[] info = null;
 		out.print('3' + "" +'0' + "" + ID);
 		out.flush();
 		stat = in.readLine();
 		if(stat.equals("1")) { 
 			stat = in.readLine();
-			System.out.println("IP = " + stat);
+			info = stat.split(" ");
+			System.out.println("IP = " + info[0] + " " + "Port = " + info[1]);
+			udp.UDP_ready(InetAddress.getByName(info[0]), Integer.parseInt(info[1]));
 		}
 		else if(stat.equals("0")) {
 			System.out.println("로그아웃 상태");

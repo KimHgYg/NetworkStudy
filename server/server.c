@@ -29,7 +29,6 @@ typedef struct _ACCOUNT{
 typedef struct _ARG{
 	int sock;
 	struct sockaddr_in client_sock;
-	char *port;
 }Arg;
 
 typedef struct _HB_ARg{
@@ -44,7 +43,8 @@ HB **hb;
 
 void *get_connection(void *);
 void heart_beat(Arg *, char *);
-void req(Arg *);
+void req(Arg *, char *);
+void port_update(char *, char *);
 
 int login(account *);
 int logout(char *);
@@ -63,6 +63,8 @@ MYSQL_ROW row;
 
 pthread_mutex_t a_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t server_sock_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t udp_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 pthread_cond_t conA = PTHREAD_COND_INITIALIZER;
 
 pthread_t conn_thread[CONN_MAX];
@@ -72,19 +74,31 @@ int con_index;
 int hb_index;
 
 int server_sock;
+int udp_sock;
+
+struct sockaddr_in sock_udp;
+struct sockaddr_in client_udp;
 
 int main(int argc, char *argv[]){
 	int client_sock;
 
-	struct sockaddr_in sock_addr;
-	struct sockaddr_in client_addr;
+	struct sockaddr_in sock_addr, client_addr;
+
+
 	int size = sizeof(struct sockaddr_in);
+
 	memset(&client_addr, 0x00, size);
 	memset(&sock_addr,0x00,size);
+
+	memset(&sock_udp, 0x00, size);
 
 	sock_addr.sin_family = AF_INET;
 	sock_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	sock_addr.sin_port = htons(atoi(argv[1]));
+
+	sock_udp.sin_family = AF_INET;
+	sock_udp.sin_addr.s_addr = htonl(INADDR_ANY);
+	sock_udp.sin_port = htons(3002);
 
 	arg = malloc(sizeof(Arg *)*CONN_MAX);
 	hb = malloc(sizeof(HB *)*CONN_MAX);
@@ -95,8 +109,10 @@ int main(int argc, char *argv[]){
 		fprintf(stderr,"<usage> : server_java.out \"port number\"\n");
 		exit(0);
 	}
+
 	init_mysql();
 
+	//initiate TCP connection
 	if((server_sock = socket(AF_INET,SOCK_STREAM,0)) == -1){
 		perror("socket error ");
 		exit(0);
@@ -112,6 +128,16 @@ int main(int argc, char *argv[]){
 		exit(0);
 	}
 
+	//initiate UDP connection
+	if((udp_sock = socket(PF_INET,SOCK_DGRAM,0)) == -1){
+		perror("udp socket failed ");
+		exit(0);
+	}
+	if(bind(udp_sock, (struct sockaddr *)&sock_udp,size) == -1){
+		perror("bind udp socket error ");
+		exit(0);
+	}
+
 	_Bool optval = 1;
 	setsockopt(server_sock, SOL_SOCKET,SO_REUSEADDR,(char *)&optval,sizeof(optval));
 
@@ -122,21 +148,17 @@ int main(int argc, char *argv[]){
 			perror("accept error ");
 			exit(0);
 		}
-		//Add UDP connection hear
-
-
+		
 		printf("client connected\n");
+
+		con_index = client_sock;
+
 		arg[con_index] = malloc(sizeof(Arg));
-		arg[con_index]->port = malloc(sizeof(7));
 		arg[con_index]->sock = client_sock;
 		arg[con_index]->client_sock = client_addr;
 
-		//Add port update hear
-
-
 		pthread_create(&conn_thread[con_index],NULL,get_connection,(void *)arg[con_index]);
 
-		con_index++;
 		//pthread_cond_wait(&conA, &server_sock_mutex);
 	}
 	int i=0;
@@ -144,6 +166,8 @@ int main(int argc, char *argv[]){
 	mysql_close(conn);
 	close(server_sock);
 }
+
+
 
 void *get_connection(void *arg){
 	int ret;
@@ -173,7 +197,7 @@ void *get_connection(void *arg){
 
 	//create account
 	if(menu == '1'){
-		pthread_cond_signal(&conA);
+		//pthread_cond_signal(&conA);
 		update_info((Arg *)arg, ac);
 		ret = create_account(ac);
 		if(ret == 0){
@@ -202,18 +226,19 @@ void *get_connection(void *arg){
 		if((ret != 0) || (ret != 1)){ 
 			heart_beat((Arg *)arg,ac->ID);
 		}
-		pthread_cond_signal(&conA);
+		//pthread_cond_signal(&conA);
 	}
 	free(ac);
 	close(((Arg *)arg)->sock);
 	free((Arg *)arg);
 }
 
-void req(Arg *arg){
+void req(Arg *arg, char *ID){
 	char query[100] = "";
 	char reqID[30] = "";
 	char option = '0';
 	char text[30] = "";
+	char IP[30] = "";
 	int ret;
 
 	if(read(((Arg *)arg)->sock, &option, 1) == 0){
@@ -245,7 +270,7 @@ void req(Arg *arg){
 			if(!strcmp(row[0],"1")){
 				memset(text,0x00,30);
 				memset(query,0x00,100);
-				sprintf(query,"select IP from client where ID = \'%s\';",reqID);
+				sprintf(query,"select IP, port from client where ID = \'%s\';",reqID);
 				if(ret = mysql_query(conn,query)){
 					printf("Cannot select IP\n");
 					return (void)-1;
@@ -253,13 +278,27 @@ void req(Arg *arg){
 				res = mysql_store_result(conn);
 				if(res->row_count == 1){
 					row = mysql_fetch_row(res);
-					strcpy(text,row[0]);
-					strcat(text,"\n");
+					sprintf(text,"%s %s\n",row[0],row[1]);
 					write(((Arg *)arg)->sock,text,strlen(text));
-					printf("export IP = %s\n",row[0]);
+					printf("export IP = %s, port = %s\n",row[0],row[1]);
 				}
 			}
 			printf("export user info %s to %d\n",reqID,((Arg *)arg)->sock);
+			memset(query,0x00,100);
+			memset(text,0x00,30);
+			strcpy(IP,inet_ntoa(((Arg *)arg)->client_sock.sin_addr));
+			sprintf(query,"select port, socket_number from client, status where client.ID = status.ID and client.IP = \'%s\';",IP);
+			if((ret = mysql_query(conn,query)) != 0){
+				printf("Cannot select socket_number\n");
+				return (void)-1;
+			}
+			res = mysql_store_result(conn);
+			if(res->row_count == 1){
+				row=mysql_fetch_row(res);
+				sprintf(text,"%s %s\n",IP, row[0]);//IP port socket_number
+			}
+			write(row[1],"",size);
+			write(row[1],text,strlen(text));
 		}
 		else{
 			write(((Arg *)arg)->sock,"2\n",2);
@@ -272,6 +311,7 @@ void req(Arg *arg){
 int client_stat(Arg *hb, char *ID){
 	char stat = -1;
 	char query[100] = "";
+	char text[30] = "";
 	char port[7] = "";
 	int ret;
 	int tmp;
@@ -280,7 +320,7 @@ int client_stat(Arg *hb, char *ID){
 
 	tv.tv_sec = 6;
 	tv.tv_usec = 50;
-	setsockopt(((Arg *)hb)->sock,SOL_SOCKET, SO_RCVTIMEO,(const char*)&tv,sizeof(tv));
+	//setsockopt(((Arg *)hb)->sock,SOL_SOCKET, SO_RCVTIMEO,(const char*)&tv,sizeof(tv));
 
 	while(1){
 		if((tmp = read(((Arg *)hb)->sock, &stat, 1)) == -1){
@@ -288,28 +328,21 @@ int client_stat(Arg *hb, char *ID){
 		}
 		//alive
 		if(stat == '1'){
-			read(((Arg *)hb)->sock, &len, 1);
-			read(((Arg *)hb)->sock, port, (int)(len-'0'));
-			sprintf(query,"update status set stat = \'%c\' where ID = \'%s\';",stat, ID);
+			//read(((Arg *)hb)->sock, &len, 1);
+			//read(((Arg *)hb)->sock, port, (int)(len-'0'));
+			sprintf(query,"update status set stat = \'%c\', socket_number = %d where ID = \'%s\';",stat,((Arg *)arg)->sock,ID);
 			pthread_mutex_lock(&a_mutex);
 			ret = mysql_query(conn,query);
 			pthread_mutex_unlock(&a_mutex);
 			memset(query,0x00,100);
-			memset(port,0x00,7);
 			if(ret != 0){
 				printf("Cannot update stat=0\n");
 				return -1;
 			}
-			strcpy(port,hb->port);
-			sprintf(query,"update client set IP = \'%s\',port = \'%s\' where ID = \'%s\';",inet_ntoa(hb->client_sock.sin_addr),port,ID);
-			pthread_mutex_lock(&a_mutex);
-			ret = mysql_query(conn,query);
-			pthread_mutex_unlock(&a_mutex);
 			memset(query,0x00,100);
-			if(ret != 0){
-				printf("Cannot update stat = 0-2\n");
-				return -1;
-			}
+			memset(text,0x00,30);
+			sprintf(text,"%s\n",inet_ntoa(hb->client_sock.sin_addr));
+			write(((Arg *)hb)->sock, text, strlen(text));
 			printf("HB %d\n",((Arg *)hb)->sock);
 		}
 		//error
@@ -327,7 +360,10 @@ int client_stat(Arg *hb, char *ID){
 			break;
 		}
 		else if(stat == '3'){
-			req(hb);
+			req(hb, ID);
+		}
+		else if(stat == '4'){
+			port_update(inet_ntoa(hb->client_sock.sin_addr),ID);
 		}
 		stat = 0;
 		tmp = 0;
@@ -335,11 +371,32 @@ int client_stat(Arg *hb, char *ID){
 	return 0;
 }
 
+void port_update(char *IP, char *ID){
+	char buf;
+	char query[100] = "";
+	int port,ret;
+	int size = sizeof(struct sockaddr_in);
+
+	pthread_mutex_lock(&udp_mutex);
+	recvfrom(udp_sock,&buf,1,0,(struct sockaddr *)&client_udp,&size);
+	port = ntohs(client_udp.sin_port);
+	memset(query,0x00,100);
+	sprintf(query,"update client set IP = \'%s\', port = \'%d\' where ID = \'%s\';",IP,port,ID);
+	pthread_mutex_lock(&a_mutex);
+	if((ret = mysql_query(conn,query)) != 0){
+		printf("port_update failed\n");
+		return ;
+	}
+	pthread_mutex_unlock(&a_mutex);
+	pthread_mutex_unlock(&udp_mutex);
+	printf("port updated %s\n",ID);
+}
+
 int logout(char *ID){
 	pthread_mutex_lock(&a_mutex);
 	char query[100] = "";
 	int ret;
-	sprintf(query,"update status set stat = \'0\' where ID = \'%s\';",ID);
+	sprintf(query,"update status set stat = \'0\', socket_number = NULL where ID = \'%s\';",ID);
 	ret = mysql_query(conn,query);
 	if(ret != 0)
 		printf("logout failed %s\n",ID);

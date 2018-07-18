@@ -19,7 +19,7 @@ public class main_thread {
 		// TODO Auto-generated method stub
 			in = new Scanner(System.in);
 			int menu;
-			get_info gi = new get_info(InetAddress.getByName(args[0]), 3000);
+			get_info gi = new get_info(InetAddress.getByName(args[0]), 3000, args[0]);
 			while(true) {
 				System.out.println("메뉴를 선택하세요\n 1. 회원가입\n 2. 로그인\n 3. 로그아웃\n"
 						+ "4. 유저 상태 요청");
