@@ -148,7 +148,7 @@ int main(int argc, char *argv[]){
 			perror("accept error ");
 			exit(0);
 		}
-		
+
 		printf("client connected\n");
 
 		con_index = client_sock;
@@ -280,14 +280,18 @@ void req(Arg *arg, char *ID){
 					row = mysql_fetch_row(res);
 					sprintf(text,"%s %s\n",row[0],row[1]);
 					write(((Arg *)arg)->sock,text,strlen(text));
-					printf("export IP = %s, port = %s\n",row[0],row[1]);
 				}
 			}
-			printf("export user info %s to %d\n",reqID,((Arg *)arg)->sock);
+			memset(&client_udp,0x00,sizeof(struct sockaddr_in));
+			client_udp.sin_family = AF_INET;
+			client_udp.sin_addr.s_addr = inet_addr(row[0]);
+			client_udp.sin_port = htons(atoi(row[1]));
+
+			printf("export user info %s, IP %s port %s to %s\n",reqID,row[0], row[1],ID);
 			memset(query,0x00,100);
 			memset(text,0x00,30);
 			strcpy(IP,inet_ntoa(((Arg *)arg)->client_sock.sin_addr));
-			sprintf(query,"select port, socket_number from client, status where client.ID = status.ID and client.IP = \'%s\';",IP);
+			sprintf(query,"select port, socket_number from client, status where client.ID = status.ID and client.ID = \'%s\';",ID);
 			if((ret = mysql_query(conn,query)) != 0){
 				printf("Cannot select socket_number\n");
 				return (void)-1;
@@ -297,15 +301,15 @@ void req(Arg *arg, char *ID){
 				row=mysql_fetch_row(res);
 				sprintf(text,"%s %s\n",IP, row[0]);//IP port socket_number
 			}
-			write(row[1],"",size);
-			write(row[1],text,strlen(text));
+			printf("signal %s sent to %s %s",text, inet_ntoa(client_udp.sin_addr),reqID);
+			sendto(udp_sock,text,strlen(text),0,(struct sockaddr *)&client_udp,sizeof(struct sockaddr_in));
 		}
 		else{
 			write(((Arg *)arg)->sock,"2\n",2);
 			printf("export FAILED user info %s to %d\n",reqID,((Arg *)arg)->sock);
 		}
 		pthread_mutex_unlock(&a_mutex);
-}
+	}
 }
 //check heartbit
 int client_stat(Arg *hb, char *ID){

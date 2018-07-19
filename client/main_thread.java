@@ -16,7 +16,6 @@ public class main_thread {
 	private static int status;
 	
 		public static void main(String[] args) throws Exception{
-		// TODO Auto-generated method stub
 			in = new Scanner(System.in);
 			int menu;
 			get_info gi = new get_info(InetAddress.getByName(args[0]), 3000, args[0]);

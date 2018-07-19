@@ -70,7 +70,6 @@ public class get_info {
 		try {
 			in.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		hb.join();

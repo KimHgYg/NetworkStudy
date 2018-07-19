@@ -44,18 +44,13 @@ public class heartbeat extends Thread{
 						beat_out.flush();
 						UDP.update_port_to_server();
 					}
-					if(tmp.equals("1")) {
-						
-					}
 					sleep(3000);
 			}
 		}
 		catch (InterruptedException e) {
-			//TODO Auto-generated catch block
 			beat_out.close();
 			return;
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}

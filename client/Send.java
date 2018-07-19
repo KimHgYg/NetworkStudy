@@ -14,7 +14,7 @@ public class Send extends Thread{
 	private static String msg;
 	private InetAddress ia;
 	private int target_port;
-	
+	private boolean flag = false;
 	public Send(DatagramSocket sock, InetAddress ia, int target_port) {
 		// TODO Auto-generated constructor stub
 		this.sock = sock;
@@ -23,17 +23,40 @@ public class Send extends Thread{
 		in = new Scanner(System.in);
 	}
 	
+	public void check_ready() {
+		pack = new DatagramPacket("-1".getBytes(), "1".getBytes().length, ia, target_port);
+		try {
+			sock.send(pack);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void ack() {
+		pack = new DatagramPacket("-2".getBytes(), "-2".getBytes().length, ia, target_port);
+		try {
+			sock.send(pack);
+		} catch(IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void set_send_on() {
+		this.flag = true;
+	}
+	
 	public void run() {
 		while(true) {
-			System.out.println("³ª : ");
-			msg = in.nextLine();
-			pack = new DatagramPacket(msg.getBytes(), msg.length(), ia, target_port);
-			try {
-				sock.send(pack);
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-				break;
+			if(flag) {
+				System.out.println("³ª : ");
+				msg = in.nextLine();
+				pack = new DatagramPacket(msg.getBytes(), msg.length(), ia, target_port);
+				try {
+					sock.send(pack);
+				} catch (IOException e) {
+					e.printStackTrace();
+					break;
+				}
 			}
 		}
 	}
