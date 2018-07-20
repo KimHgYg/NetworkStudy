@@ -270,7 +270,7 @@ void req(Arg *arg, char *ID){
 			if(!strcmp(row[0],"1")){
 				memset(text,0x00,30);
 				memset(query,0x00,100);
-				sprintf(query,"select IP, port from client where ID = \'%s\';",reqID);
+				sprintf(query,"select IP, port, private_IP, private_port from client where ID = \'%s\';",reqID);
 				if(ret = mysql_query(conn,query)){
 					printf("Cannot select IP\n");
 					return (void)-1;
@@ -278,7 +278,7 @@ void req(Arg *arg, char *ID){
 				res = mysql_store_result(conn);
 				if(res->row_count == 1){
 					row = mysql_fetch_row(res);
-					sprintf(text,"%s %s\n",row[0],row[1]);
+					sprintf(text,"%s %s %s %s\n",row[0],row[1],row[2],row[3]);
 					write(((Arg *)arg)->sock,text,strlen(text));
 				}
 			}
@@ -291,7 +291,7 @@ void req(Arg *arg, char *ID){
 			memset(query,0x00,100);
 			memset(text,0x00,30);
 			strcpy(IP,inet_ntoa(((Arg *)arg)->client_sock.sin_addr));
-			sprintf(query,"select port, socket_number from client, status where client.ID = status.ID and client.ID = \'%s\';",ID);
+			sprintf(query,"select port, private_IP, private_port from client where ID = \'%s\';",ID);
 			if((ret = mysql_query(conn,query)) != 0){
 				printf("Cannot select socket_number\n");
 				return (void)-1;
@@ -299,10 +299,11 @@ void req(Arg *arg, char *ID){
 			res = mysql_store_result(conn);
 			if(res->row_count == 1){
 				row=mysql_fetch_row(res);
-				sprintf(text,"%s %s\n",IP, row[0]);//IP port socket_number
+				sprintf(text,"%s %s %s %s\n",IP, row[0],row[1],row[2]);//IP port socket_number
 			}
 			printf("signal %s sent to %s %s",text, inet_ntoa(client_udp.sin_addr),reqID);
 			sendto(udp_sock,text,strlen(text),0,(struct sockaddr *)&client_udp,sizeof(struct sockaddr_in));
+
 		}
 		else{
 			write(((Arg *)arg)->sock,"2\n",2);
@@ -376,16 +377,21 @@ int client_stat(Arg *hb, char *ID){
 }
 
 void port_update(char *IP, char *ID){
-	char buf;
-	char query[100] = "";
+	char buf[25] = "";
+	char pri_IP[15] = "";
+	char pri_port[5] = "";
+	char query[150] = "";
 	int port,ret;
 	int size = sizeof(struct sockaddr_in);
 
 	pthread_mutex_lock(&udp_mutex);
-	recvfrom(udp_sock,&buf,1,0,(struct sockaddr *)&client_udp,&size);
+	recvfrom(udp_sock,buf,sizeof(buf),0,(struct sockaddr *)&client_udp,&size);
+	
+	strcpy(pri_IP, strtok(buf," "));
+	strcpy(pri_port , strtok(NULL, " "));
 	port = ntohs(client_udp.sin_port);
 	memset(query,0x00,100);
-	sprintf(query,"update client set IP = \'%s\', port = \'%d\' where ID = \'%s\';",IP,port,ID);
+	sprintf(query,"update client set IP = \'%s\', port = \'%d\', private_IP = \'%s\', private_port = \'%s\' where ID = \'%s\';",IP,port,pri_IP,pri_port,ID);
 	pthread_mutex_lock(&a_mutex);
 	if((ret = mysql_query(conn,query)) != 0){
 		printf("port_update failed\n");

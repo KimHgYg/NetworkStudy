@@ -54,9 +54,9 @@ public class get_info {
 			System.out.println("Wrong password");
 		}
 		else {
-			udp= new UDP_conn(addr);
+			udp= new UDP_conn(this, addr, ID);
 			
-			hb = new heartbeat(udp, out, in, addr);
+			hb = new heartbeat(this, udp, out, in, addr);
 			hb.start();
 
 			System.out.println("Login");
@@ -77,7 +77,7 @@ public class get_info {
 		System.out.println("정상적으로 로그아웃 되었습니다");
 	}
 	
-	public String reqStat(String ID) throws Exception {
+	public String[] reqStat(String ID) throws Exception {
 		String stat = null;
 		String[] info = null;
 		out.print('3' + "" +'0' + "" + ID);
@@ -86,8 +86,9 @@ public class get_info {
 		if(stat.equals("1")) { 
 			stat = in.readLine();
 			info = stat.split(" ");
-			System.out.println("IP = " + info[0] + " " + "Port = " + info[1]);
-			udp.UDP_ready(InetAddress.getByName(info[0]), Integer.parseInt(info[1]));
+			System.out.println("IP = " + info[0] + " " + "Port = " + info[1] + " " + info[2] + " " + info[3]);
+			udp.UDP_ready(InetAddress.getByName(info[0]), Integer.parseInt(info[1]),
+					InetAddress.getByName(info[2]), Integer.parseInt(info[3]));
 		}
 		else if(stat.equals("0")) {
 			System.out.println("로그아웃 상태");
@@ -99,7 +100,7 @@ public class get_info {
 			System.out.println("서버 오류");
 			stat = "-1";
 		}
-		return stat;
+		return info;
 	}
 	
 	public int create_account(String Name, String ID, String pswd) throws IOException{

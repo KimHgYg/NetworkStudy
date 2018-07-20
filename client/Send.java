@@ -9,14 +9,16 @@ import java.util.Scanner;
 public class Send extends Thread{
 
 	private DatagramSocket sock;
-	private static DatagramPacket pack;
+	private static DatagramPacket pack, p_pack;
 	private Scanner in;
 	private static String msg;
 	private InetAddress ia;
 	private int target_port;
 	private boolean flag = false;
+	private keep_alive alive;
+	private UDP_conn UDP;
+	
 	public Send(DatagramSocket sock, InetAddress ia, int target_port) {
-		// TODO Auto-generated constructor stub
 		this.sock = sock;
 		this.ia = ia;
 		this.target_port = target_port;
@@ -32,6 +34,11 @@ public class Send extends Thread{
 		}
 	}
 	
+	public void re_set(InetAddress ia, int port) {
+		this.ia = ia;
+		this.target_port = port;
+	}
+	
 	public void ack() {
 		pack = new DatagramPacket("-2".getBytes(), "-2".getBytes().length, ia, target_port);
 		try {
@@ -43,6 +50,8 @@ public class Send extends Thread{
 	
 	public void set_send_on() {
 		this.flag = true;
+		alive = new keep_alive(sock, ia, target_port);
+		alive.start();
 	}
 	
 	public void run() {
@@ -54,7 +63,6 @@ public class Send extends Thread{
 				try {
 					sock.send(pack);
 				} catch (IOException e) {
-					e.printStackTrace();
 					break;
 				}
 			}

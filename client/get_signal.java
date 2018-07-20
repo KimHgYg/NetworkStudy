@@ -34,7 +34,7 @@ public class get_signal extends Thread{
 				String byteTostring = new String(buf); //IP, port
 				String[] tmp = byteTostring.split(" |\n");
 				System.out.println("got signal! " + tmp[0] + " " + tmp[1] + "I'm this : " + sock.getLocalPort());
-				udp.UDP_ready(InetAddress.getByName(tmp[0]), Integer.parseInt(tmp[1]));
+				udp.UDP_ready(InetAddress.getByName(tmp[0]), Integer.parseInt(tmp[1]),InetAddress.getByName(tmp[2]),Integer.parseInt(tmp[3]));
 				this.Off();
 			} catch (IOException | InterruptedException e) {
 				continue;

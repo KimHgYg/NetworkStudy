@@ -14,17 +14,21 @@ public class heartbeat extends Thread{
 	private PrintWriter beat_out;
 	private BufferedReader beat_in;
 	private char stat = '1';
-	private String IP = "0.0.0.0";
-	private static String tmp;
-	private UDP_conn UDP;
 	private InetAddress server_addr;
+	private String IP = "0.0.0.0";
+	private String myIP = "0.0.0.0";
+	private static String tmp,tmp2;
+	
+	private UDP_conn UDP;
+	private get_info gi;
 	
 
 	// stat //1 = active,// 0 = logout //2 = error //3 = request, //4 = port update
-	public heartbeat(UDP_conn UDP, PrintWriter out, BufferedReader in, InetAddress server_addr) throws Exception { 
+	public heartbeat(get_info gi, UDP_conn UDP, PrintWriter out, BufferedReader in, InetAddress server_addr) throws Exception { 
 		beat_out = out;
 		beat_in = in;
 		this.UDP = UDP;
+		this.gi = gi;
 		this.server_addr = server_addr;
 	}
 	
@@ -38,11 +42,16 @@ public class heartbeat extends Thread{
 					beat_out.print(stat);
 					beat_out.flush();
 					tmp = beat_in.readLine();
-					if(!(IP.equals(tmp))) {
+					tmp2 = UDP.get_myIP();
+					//UDP 통신 상대 정보 바뀌었을 때
+					if(tmp.equals("-1")) {
+						String tmp = beat_in.readLine();
+					}
+					//내 정보 바꼈을 때
+					else if(!(IP.equals(tmp))||!(myIP.equals(tmp2))) {
 						IP = tmp;
-						beat_out.print('4');
-						beat_out.flush();
-						UDP.update_port_to_server();
+						myIP = tmp2;
+						UDP.update_port_to_server(beat_out);
 					}
 					sleep(3000);
 			}

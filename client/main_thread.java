@@ -57,7 +57,7 @@ public class main_thread {
 					String IP = null;
 					System.out.println("원하는 ID를 입력하세요\n");
 					ID = in.nextLine();
-					IP = gi.reqStat(ID);
+					gi.reqStat(ID);
 				}
 			}
 		}

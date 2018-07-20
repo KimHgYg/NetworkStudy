@@ -3,6 +3,7 @@ package client_linux;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.SocketException;
 
 public class Receive extends Thread{
@@ -19,7 +20,7 @@ public class Receive extends Thread{
 		bytemsg = new byte[200];
 		this.send = send;
 	}
-		
+	
 	public void run() {
 		int n = 1;
 		send.check_ready();
