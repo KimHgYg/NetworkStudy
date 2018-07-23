@@ -25,8 +25,6 @@ public class main_thread {
 				System.out.println("메뉴를 선택하세요\n 1. 회원가입\n 2. 로그인\n 3. 로그아웃\n"
 						+ "4. 유저 상태 요청");
 				menu = Integer.parseInt(in.nextLine());
-			
-				
 				//register
 				if(menu == 1) {
 					System.out.println("생성하실 이름 및 ID와 password를 입력하세요");
@@ -44,8 +42,7 @@ public class main_thread {
 				else if(menu == 2) {
 					System.out.println("ID와 password를 입력하세요");
 					udp = gi.login(in.nextLine(), in.nextLine());
-					if ((status == 0) || (status == 1)) {
-						//no account   //wrong pswd
+					if(udp == null) {
 						return;
 					}
 				}

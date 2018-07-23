@@ -56,8 +56,18 @@ public class Send extends Thread{
 		alive.start();
 	}
 	
+	public void logout() {
+		String s = "qpwo";
+		pack = new DatagramPacket(s.getBytes(), s.getBytes().length, ia, target_port);
+		try {
+			sock.send(pack);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
 	public void run() {
-		System.out.println("before send on");
 		while(true) {
 			if(flag) {
 				System.out.println("³ª : ");
@@ -73,7 +83,7 @@ public class Send extends Thread{
 				sleep(100);
 			} catch (InterruptedException e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				break;
 			}
 		}
 	}

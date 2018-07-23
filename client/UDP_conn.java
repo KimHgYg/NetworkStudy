@@ -46,12 +46,13 @@ public class UDP_conn {
 		this.pia = pia;
 		gs.Off();
 		//this.ia = ia;
-		//if(ia == pia) 
+		if(pia.getHostName().equals(InetAddress.getLocalHost().getHostName())) 
 			send = new Send(sock, pia, target_p_port);
-		//else
-			//send = new Send(sock, ia, target_port);
+		else
+			send = new Send(sock, ia, target_port);
 		rec = new Receive(send, sock);
 		this.start();
+		this.Wait();
 	}
 	
 	public void re_set(InetAddress ia, int port) {
@@ -93,6 +94,16 @@ public class UDP_conn {
 			e.printStackTrace();
 		}
 	}*/
+	
+	public void Wait() {
+		try {
+			send.join();
+			rec.join();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
 	
 	public void stop() throws InterruptedException {
 		send.interrupt();

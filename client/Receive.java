@@ -1,10 +1,12 @@
 package client_linux;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.util.concurrent.TimeoutException;
 
 public class Receive extends Thread{
 
@@ -78,12 +80,18 @@ public class Receive extends Thread{
 			try {
 				sock.receive(pack);
 			} catch (IOException e) {
-				e.printStackTrace();
+				send.interrupt();
+				System.out.println("상대방이 떠났습니다");
 				break;
-			}
+			} 
 			strmsg = new String(bytemsg);
 			if(strmsg.contains("-1"))
 				continue;
+			else if(strmsg.contains("qpwo")) {
+				System.out.println("상대방이 떠났습니다");
+				send.interrupt();
+				break;
+			}
 			System.out.println("상대방 : " + strmsg);
 		}
 	}

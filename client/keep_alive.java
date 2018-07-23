@@ -35,8 +35,7 @@ public class keep_alive extends Thread{
 				sock.send(p);
 				sleep(3000);
 			} catch (IOException e) {
-				n++;
-				System.out.println("재 연결 시도중..." + n);
+				e.printStackTrace();
 			} catch(InterruptedException e) {
 				e.printStackTrace();
 			}
