@@ -26,7 +26,8 @@ public class Send extends Thread{
 	}
 	
 	public void check_ready() {
-		pack = new DatagramPacket("-1".getBytes(), "1".getBytes().length, ia, target_port);
+		String s = "-1";
+		pack = new DatagramPacket(s.getBytes(), s.getBytes().length, ia, target_port);
 		try {
 			sock.send(pack);
 		} catch (IOException e) {
@@ -40,7 +41,8 @@ public class Send extends Thread{
 	}
 	
 	public void ack() {
-		pack = new DatagramPacket("-2".getBytes(), "-2".getBytes().length, ia, target_port);
+		String s = "-2";
+		pack = new DatagramPacket(s.getBytes(), s.getBytes().length, ia, target_port);
 		try {
 			sock.send(pack);
 		} catch(IOException e) {
@@ -55,6 +57,7 @@ public class Send extends Thread{
 	}
 	
 	public void run() {
+		System.out.println("before send on");
 		while(true) {
 			if(flag) {
 				System.out.println("³ª : ");
@@ -66,7 +69,12 @@ public class Send extends Thread{
 					break;
 				}
 			}
+			try {
+				sleep(100);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	}
-
 }

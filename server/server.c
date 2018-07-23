@@ -237,8 +237,10 @@ void req(Arg *arg, char *ID){
 	char query[100] = "";
 	char reqID[30] = "";
 	char option = '0';
-	char text[30] = "";
+	char text[100] = "";
 	char IP[30] = "";
+
+	char oIP[30]="",oport[5]="",opIP[30]="",opport[5]="";
 	int ret;
 
 	if(read(((Arg *)arg)->sock, &option, 1) == 0){
@@ -248,8 +250,8 @@ void req(Arg *arg, char *ID){
 	}
 
 	if(option == '0'){
-		memset(query,0x00,30);
-		memset(text ,0x00,30);
+		memset(query,0x00,100);
+		memset(text ,0x00,100);
 		if(read(((Arg *)arg)->sock,reqID,30) == 0){
 			printf("server connection closed %d\n",((Arg *)arg)->sock);
 			close(((Arg *)arg)->sock);
@@ -268,7 +270,7 @@ void req(Arg *arg, char *ID){
 			strcat(text,"\n");
 			write(((Arg *)arg)->sock,text,strlen(text));
 			if(!strcmp(row[0],"1")){
-				memset(text,0x00,30);
+				memset(text,0x00,100);
 				memset(query,0x00,100);
 				sprintf(query,"select IP, port, private_IP, private_port from client where ID = \'%s\';",reqID);
 				if(ret = mysql_query(conn,query)){
@@ -278,30 +280,38 @@ void req(Arg *arg, char *ID){
 				res = mysql_store_result(conn);
 				if(res->row_count == 1){
 					row = mysql_fetch_row(res);
-					sprintf(text,"%s %s %s %s\n",row[0],row[1],row[2],row[3]);
-					write(((Arg *)arg)->sock,text,strlen(text));
+					//oppnent info
+					strcpy(oIP,row[0]);strcpy(oport,row[1]);strcpy(opIP,row[2]);strcpy(opport,row[3]);
+					sprintf(text,"%s %s %s %s\n",oIP,oport,opIP,opport);
+					memset(query,0x00,30);
+					strcpy(IP,inet_ntoa(((Arg *)arg)->client_sock.sin_addr));
+					sprintf(query,"select port, private_IP, private_port from client where ID = \'%s\';",ID);
+					if((ret = mysql_query(conn,query)) != 0){
+						printf("Cannot select socket_number\n");
+						return (void)-1;
+					}
+					res = mysql_store_result(conn);
+					//my info
+					if(res->row_count == 1){
+						row=mysql_fetch_row(res);
+						//my sock info
+						client_udp.sin_family = AF_INET;
+						client_udp.sin_addr.s_addr = inet_addr(IP);
+						client_udp.sin_port = htons(atoi(row[0]));
+						sendto(udp_sock,text,strlen(text),0,(struct sockaddr *)&client_udp,sizeof(struct sockaddr_in));
+						memset(text,0x00,100);
+						sprintf(text,"%s %s %s %s\n",IP, row[0],row[1],row[2]);//IP port
+					}
 				}
 			}
+			//oppnent sock info
 			memset(&client_udp,0x00,sizeof(struct sockaddr_in));
 			client_udp.sin_family = AF_INET;
-			client_udp.sin_addr.s_addr = inet_addr(row[0]);
-			client_udp.sin_port = htons(atoi(row[1]));
+			client_udp.sin_addr.s_addr = inet_addr(oIP);
+			client_udp.sin_port = htons(atoi(oport));
 
-			printf("export user info %s, IP %s port %s to %s\n",reqID,row[0], row[1],ID);
-			memset(query,0x00,100);
-			memset(text,0x00,30);
-			strcpy(IP,inet_ntoa(((Arg *)arg)->client_sock.sin_addr));
-			sprintf(query,"select port, private_IP, private_port from client where ID = \'%s\';",ID);
-			if((ret = mysql_query(conn,query)) != 0){
-				printf("Cannot select socket_number\n");
-				return (void)-1;
-			}
-			res = mysql_store_result(conn);
-			if(res->row_count == 1){
-				row=mysql_fetch_row(res);
-				sprintf(text,"%s %s %s %s\n",IP, row[0],row[1],row[2]);//IP port socket_number
-			}
-			printf("signal %s sent to %s %s",text, inet_ntoa(client_udp.sin_addr),reqID);
+			printf("export user info %s, IP %s port %s to %s\n",reqID,oIP, oport, ID);
+			printf("signal %s sent to %s %s\n",text, inet_ntoa(client_udp.sin_addr),reqID);
 			sendto(udp_sock,text,strlen(text),0,(struct sockaddr *)&client_udp,sizeof(struct sockaddr_in));
 
 		}
@@ -348,7 +358,7 @@ int client_stat(Arg *hb, char *ID){
 			memset(text,0x00,30);
 			sprintf(text,"%s\n",inet_ntoa(hb->client_sock.sin_addr));
 			write(((Arg *)hb)->sock, text, strlen(text));
-			printf("HB %d\n",((Arg *)hb)->sock);
+			printf("HB %d port %d\n",((Arg *)hb)->sock,ntohs(((Arg *)hb)->client_sock.sin_port));
 		}
 		//error
 		else if(stat == '0'){
@@ -383,13 +393,16 @@ void port_update(char *IP, char *ID){
 	char query[150] = "";
 	int port,ret;
 	int size = sizeof(struct sockaddr_in);
+	struct sockaddr_in client;
+
+	memset(&client,0x00,size);
 
 	pthread_mutex_lock(&udp_mutex);
-	recvfrom(udp_sock,buf,sizeof(buf),0,(struct sockaddr *)&client_udp,&size);
+	recvfrom(udp_sock,buf,sizeof(buf),0,(struct sockaddr *)&client,&size);
 	
 	strcpy(pri_IP, strtok(buf," "));
 	strcpy(pri_port , strtok(NULL, " "));
-	port = ntohs(client_udp.sin_port);
+	port = ntohs(client.sin_port);
 	memset(query,0x00,100);
 	sprintf(query,"update client set IP = \'%s\', port = \'%d\', private_IP = \'%s\', private_port = \'%s\' where ID = \'%s\';",IP,port,pri_IP,pri_port,ID);
 	pthread_mutex_lock(&a_mutex);

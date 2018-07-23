@@ -11,6 +11,7 @@ public class keep_alive extends Thread{
 	private DatagramPacket p,r;
 	private InetAddress ia;
 	private int port, n = 0;
+	private String s;
 	
 	public keep_alive(DatagramSocket sock, InetAddress ia, int port) {
 		this.sock = sock;
@@ -24,15 +25,15 @@ public class keep_alive extends Thread{
 	}
 
 	public void run() {
-		byte[] buf = "-1".getBytes();
+		s = "-1";
+		byte[] buf = s.getBytes();
 		byte[] buf2 = new byte[100];
 		p = new DatagramPacket(buf, buf.length,ia,port);
 		r = new DatagramPacket(buf2, buf2.length);
 		while(true) {
 			try {
 				sock.send(p);
-				sock.receive(r);
-				sleep(2000);
+				sleep(3000);
 			} catch (IOException e) {
 				n++;
 				System.out.println("재 연결 시도중..." + n);

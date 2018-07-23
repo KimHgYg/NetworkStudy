@@ -15,6 +15,8 @@ public class main_thread {
 	private static String ID;
 	private static int status;
 	
+	private static UDP_conn udp;
+	
 		public static void main(String[] args) throws Exception{
 			in = new Scanner(System.in);
 			int menu;
@@ -41,7 +43,7 @@ public class main_thread {
 				//login
 				else if(menu == 2) {
 					System.out.println("ID와 password를 입력하세요");
-					status = gi.login(in.nextLine(), in.nextLine());
+					udp = gi.login(in.nextLine(), in.nextLine());
 					if ((status == 0) || (status == 1)) {
 						//no account   //wrong pswd
 						return;

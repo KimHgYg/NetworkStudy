@@ -22,33 +22,58 @@ public class Receive extends Thread{
 	}
 	
 	public void run() {
-		int n = 1;
-		send.check_ready();
+		int n = 1, k = 0;
 		while(true) {
+			bytemsg = new byte[10];
+			send.check_ready();
 			pack = new DatagramPacket(bytemsg, bytemsg.length);
 			try {
 				sock.receive(pack);
 			} catch (IOException e) {
-				//e.printStackTrace();
 				System.out.println(n + "번 째 시도 중...");
 				n++;
 				send.check_ready();
 				continue;
 			}
 			strmsg = new String(bytemsg);
-			System.out.println(strmsg);
-			if(strmsg.equals("-1")) {
-				send.ack();
-				continue;
+			//System.out.print(strmsg);
+			if(strmsg.contains("-1")) {
+				while(k < 5) {
+					send.ack();
+					k++;
+					try {
+						sock.receive(pack);
+						strmsg = new String(bytemsg);
+						//System.out.print(strmsg);
+						sleep(3000);
+					} catch (IOException e) {
+						System.out.println("응답을 기다리는 중 ..." + k);
+						continue;
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+					if(strmsg.contains("-2")) {
+						System.out.println("채팅 연결 완료");
+						flag = true;
+						send.set_send_on();
+						k = 10;
+						break;
+					}
+				}
+				if(k == 10) {
+					break;
+				}
+				else
+					k=0;
 			}
-			else if(strmsg.equals("-2")) {
-				System.out.println("채팅 연결 완료");
-				flag = true;
-				send.set_send_on();
-				break;
+			try {
+				sleep(3000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
 			}
 		}
 		while(flag) {
+			bytemsg = new byte[100];
 			pack = new DatagramPacket(bytemsg, bytemsg.length);
 			try {
 				sock.receive(pack);
@@ -57,6 +82,8 @@ public class Receive extends Thread{
 				break;
 			}
 			strmsg = new String(bytemsg);
+			if(strmsg.contains("-1"))
+				continue;
 			System.out.println("상대방 : " + strmsg);
 		}
 	}

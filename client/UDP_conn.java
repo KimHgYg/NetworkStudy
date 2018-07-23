@@ -44,11 +44,12 @@ public class UDP_conn {
 		this.target_port = target_port;
 		this.target_p_port = target_p_port;
 		this.pia = pia;
-		this.ia = ia;
-		if(ia == pia) 
+		gs.Off();
+		//this.ia = ia;
+		//if(ia == pia) 
 			send = new Send(sock, pia, target_p_port);
-		else
-			send = new Send(sock, ia, target_port);
+		//else
+			//send = new Send(sock, ia, target_port);
 		rec = new Receive(send, sock);
 		this.start();
 	}
@@ -82,7 +83,7 @@ public class UDP_conn {
 		rec.start();
 		send.start();
 	}
-	
+
 	/*public void reConnect(InetAddress ia, int port) {
 		System.out.println("연결을 재설정 합니다...");
 		try {
