@@ -16,7 +16,7 @@ public class get_info {
 	private String ID, pswd;
 	
 	private static heartbeat hb;
-	private static UDP_conn udp;
+	private static UDP_conn[] udp;
 	
 	private String serverIP;
 	private InetSocketAddress isa;
@@ -34,13 +34,14 @@ public class get_info {
 		
 		this.addr = addr;
 		this.serverIP = serverIP;
+		this.udp = new UDP_conn[10];
 	}
 	
 	//통신 기본 포트는 30000으로 설정
 	//로그인 시 UDP_conn 먼저 실행 후 heartbeat로 포트 전달.
-	public UDP_conn login(String ID, String pswd) throws Exception {
+	public UDP_conn[] login(String ID, String pswd) throws Exception {
 		String status;
-		int stat;
+		int stat, i;
 		this.ID = ID;
 		this.pswd = pswd;
 		out.print('2');
@@ -56,11 +57,12 @@ public class get_info {
 			System.out.println("Wrong password");
 		}
 		else {
-			udp= new UDP_conn(this, addr, ID);
-			
+			for(i = 0 ; i < 10 ; i ++) {
+				udp[i]= new UDP_conn(this, addr, ID, i);
+			}
 			hb = new heartbeat(this, udp, out, in, addr);
 			hb.start();
-
+			
 			System.out.println("Login");
 			
 		}
@@ -79,18 +81,21 @@ public class get_info {
 		System.out.println("정상적으로 로그아웃 되었습니다");
 	}
 	
-	public String[] reqStat(String ID) throws Exception {
+	public int reqStat(String ID) {
 		String stat = null;
-		String[] info = null;
-		out.print('3' + "" +'0' + "" + ID);
+		int index = this.get_index();
+		if(index == -1) {
+			System.out.println("더 이상 채팅 연결을 할 수 없습니다");
+			return -1;
+		}
+		out.print('3' + "" +'0' + "" + ID + "" + " " + "" + index);
 		out.flush();
-		stat = in.readLine();
+		try {
+			stat = in.readLine();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 		if(stat.equals("1")) { 
-			//stat = in.readLine();
-			//info = stat.split(" ");
-			//System.out.println("IP = " + info[0] + " " + "Port = " + info[1] + " " + info[2] + " " + info[3]);
-			//udp.UDP_ready(InetAddress.getByName(info[0]), Integer.parseInt(info[1]),
-			//		InetAddress.getByName(info[2]), Integer.parseInt(info[3]));
 			System.out.println("요청 완료");
 		}
 		else if(stat.equals("0")) {
@@ -103,7 +108,7 @@ public class get_info {
 			System.out.println("서버 오류");
 			stat = "-1";
 		}
-		return info;
+		return index;
 	}
 	
 	public int create_account(String Name, String ID, String pswd) throws IOException{
@@ -121,5 +126,13 @@ public class get_info {
 	
 	public int get_port() {
 		return this.port;	
+	}
+	
+	public int get_index() {
+		for(int i = 0 ; i < 10 ; i++) {
+			if(udp[i].get_avail())
+				return i;
+		}
+		return -1;
 	}
 }

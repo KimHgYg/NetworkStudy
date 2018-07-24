@@ -19,12 +19,12 @@ public class heartbeat extends Thread{
 	private String myIP = "0.0.0.0";
 	private static String tmp,tmp2;
 	
-	private UDP_conn UDP;
+	private UDP_conn[] UDP;
 	private get_info gi;
 	
 
 	// stat //1 = active,// 0 = logout //2 = error //3 = request, //4 = port update
-	public heartbeat(get_info gi, UDP_conn UDP, PrintWriter out, BufferedReader in, InetAddress server_addr) throws Exception { 
+	public heartbeat(get_info gi, UDP_conn[] UDP, PrintWriter out, BufferedReader in, InetAddress server_addr) throws Exception { 
 		beat_out = out;
 		beat_in = in;
 		this.UDP = UDP;
@@ -42,7 +42,7 @@ public class heartbeat extends Thread{
 					beat_out.print(stat);
 					beat_out.flush();
 					tmp = beat_in.readLine();
-					tmp2 = UDP.get_myIP();
+					tmp2 = UDP[0].get_myIP();
 					//UDP 통신 상대 정보 바뀌었을 때
 					if(tmp.equals("-1")) {
 						String tmp = beat_in.readLine();
@@ -51,12 +51,12 @@ public class heartbeat extends Thread{
 					else if(!(IP.equals(tmp))||!(myIP.equals(tmp2))) {
 						IP = tmp;
 						myIP = tmp2;
-						UDP.update_port_to_server(beat_out);
+						for(int i = 0 ;i < 10; i ++)
+							UDP[i].update_port_to_server(beat_out);
 					}
 					sleep(3000);
 			}
-		}
-		catch (InterruptedException e) {
+		}catch (InterruptedException e) {
 			beat_out.close();
 			return;
 		} catch (IOException e) {

@@ -15,7 +15,7 @@ public class main_thread {
 	private static String ID;
 	private static int status;
 	
-	private static UDP_conn udp;
+	private static UDP_conn[] udp;
 	
 		public static void main(String[] args) throws Exception{
 			in = new Scanner(System.in);

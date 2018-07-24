@@ -6,6 +6,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.util.Scanner;
 import java.util.concurrent.TimeoutException;
 
 public class Receive extends Thread{
@@ -16,11 +17,15 @@ public class Receive extends Thread{
 	private Send send;
 	private String strmsg;
 	private boolean flag = false;
+	private Scanner in;
+	private UDP_conn udp;
 	
-	public Receive(Send send, DatagramSocket sock) {
+	public Receive(Send send, DatagramSocket sock, UDP_conn udp) {
 		this.sock = sock;
 		bytemsg = new byte[200];
 		this.send = send;
+		this.in= new Scanner(System.in);
+		this.udp = udp;
 	}
 	
 	public void run() {
