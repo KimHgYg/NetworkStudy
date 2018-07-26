@@ -15,6 +15,8 @@ public class Send extends Thread{
 	private InetAddress ia;
 	private int target_port;
 	private boolean flag = false;
+	
+	
 	private keep_alive alive;
 	private UDP_conn UDP;
 	

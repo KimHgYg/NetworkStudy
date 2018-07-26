@@ -86,6 +86,7 @@ public class Receive extends Thread{
 				sock.receive(pack);
 			} catch (IOException e) {
 				send.interrupt();
+				udp.Avail();
 				System.out.println("상대방이 떠났습니다");
 				break;
 			} 
@@ -93,6 +94,7 @@ public class Receive extends Thread{
 			if(strmsg.contains("-1"))
 				continue;
 			else if(strmsg.contains("qpwo")) {
+				udp.Avail();
 				System.out.println("상대방이 떠났습니다");
 				send.interrupt();
 				break;

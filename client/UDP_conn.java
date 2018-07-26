@@ -48,15 +48,16 @@ public class UDP_conn {
 		this.target_port = target_port;
 		this.target_p_port = target_p_port;
 		this.pia = pia;
-		gs.Off();
-		//this.ia = ia;
-		//if(pia.getHostName().equals(InetAddress.getLocalHost().getHostName())) 
-			//send = new Send(sock, pia, target_p_port);
-		//else
+		this.ia = ia;
+		
+		this.not_Avail();
+		
+		if(pia.getHostName().equals(InetAddress.getLocalHost().getHostName())) 
+			send = new Send(sock, pia, target_p_port);
+		else
 			send = new Send(sock, ia, target_port);
 		rec = new Receive(send, sock, this);
 		this.start();
-		this.avail = false;
 		//this.Wait();
 	}
 	
@@ -72,16 +73,18 @@ public class UDP_conn {
 	
 	public void update_port_to_server(PrintWriter out) {
 		//server udp port = 3002
-		try {
-			String private_info = InetAddress.getLocalHost().getHostAddress() + " " + sock.getLocalPort() + " " + index;
-			out.print('4');
-			out.flush();
-			pack = new DatagramPacket(private_info.getBytes(), private_info.getBytes().length, InetAddress.getByName("52.79.185.101"), 3002); //서버 public IP주소
-			sock.send(pack);
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
+		if(avail) {
+			try {
+				String private_info = InetAddress.getLocalHost().getHostAddress() + " " + sock.getLocalPort() + " " + index;
+				out.print('4');
+				out.flush();
+				pack = new DatagramPacket(private_info.getBytes(), private_info.getBytes().length, InetAddress.getByName("52.79.185.101"), 3002); //서버 public IP주소
+				sock.send(pack);
+			} catch (UnknownHostException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 	
@@ -128,8 +131,16 @@ public class UDP_conn {
 			System.out.println("유저 정보를 가져오지 못했습니다.");
 		}	
 	}
-	
 	public boolean get_avail() {
-		return avail;
+		return this.avail;
+	}
+	
+	public void not_Avail() {
+		this.avail = false;
+		gs.Off();
+	}
+	public void Avail() {
+		this.avail = true;
+		gs.On();
 	}
 }

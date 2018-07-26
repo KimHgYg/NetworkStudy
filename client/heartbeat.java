@@ -18,6 +18,7 @@ public class heartbeat extends Thread{
 	private String IP = "0.0.0.0";
 	private String myIP = "0.0.0.0";
 	private static String tmp,tmp2;
+	private int trigger = 0;
 	
 	private UDP_conn[] UDP;
 	private get_info gi;
@@ -48,12 +49,8 @@ public class heartbeat extends Thread{
 						String tmp = beat_in.readLine();
 					}
 					//내 정보 바꼈을 때
-					else if(!(IP.equals(tmp))||!(myIP.equals(tmp2))) {
-						IP = tmp;
-						myIP = tmp2;
-						for(int i = 0 ;i < 10; i ++)
-							UDP[i].update_port_to_server(beat_out);
-					}
+					for(int i = 0 ;i < 10; i ++)
+						UDP[i].update_port_to_server(beat_out);
 					sleep(3000);
 			}
 		}catch (InterruptedException e) {

@@ -241,6 +241,7 @@ void req(Arg *arg, char *ID){
 	char IP[30] = "";
 	char tmp[40] = "";
 	char index[5] = "";
+	char oindex[5] = "";
 
 	char oIP[30]="",oport[5]="",opIP[30]="",opport[5]="";
 	int ret;
@@ -276,41 +277,40 @@ void req(Arg *arg, char *ID){
 			if(!strcmp(row[0],"1")){
 				memset(text,0x00,100);
 				memset(query,0x00,150);
-				sprintf(query,"select IP, port, private_IP, private_port from client where ID = \'%s\' and IND = %s;",reqID, index);
+				sprintf(query,"select IP, port, private_IP, private_port, IND from client where ID = \'%s\' and available = \'1\';",reqID);
 				if(ret = mysql_query(conn,query)){
 					printf("Cannot select IP\n");
 					return (void)-1;
 				}
 				res = mysql_store_result(conn);
-				if(res->row_count == 1){
+				if(res->row_count > 0){
 					row = mysql_fetch_row(res);
 					//oppnent info
-					strcpy(oIP,row[0]);strcpy(oport,row[1]);strcpy(opIP,row[2]);strcpy(opport,row[3]);
+					strcpy(oIP,row[0]);strcpy(oport,row[1]);strcpy(opIP,row[2]);strcpy(opport,row[3]);strcpy(oindex,row[4]);
 					sprintf(text,"%s %s %s %s\n",oIP,oport,opIP,opport);
-					strcpy(IP,inet_ntoa(((Arg *)arg)->client_sock.sin_addr));
 					memset(query,0x00,150);
-					sprintf(query,"update client set available = \'0\' where ID = \'%s\' and IND = %s;",reqID,index);
+					sprintf(query,"update client set available = \'0\' where ID = \'%s\' and IND = %s;",reqID,oindex);
 					if((ret = mysql_query(conn,query)) != 0){
 						printf("cannot disable port\n");
 						return (void ) -1;
 					}
 					memset(query,0x00,150);
-					sprintf(query,"select port, private_IP, private_port, IND from client where ID = \'%s\' and available = \'1\';",ID);
+					sprintf(query,"select IP, port, private_IP, private_port, IND from client where ID = \'%s\' and available = \'1\';",ID);
 					if((ret = mysql_query(conn,query)) != 0){
 						printf("Cannot select socket_number\n");
 						return (void)-1;
 					}
 					res = mysql_store_result(conn);
 					//my info
-					if(res->row_count == 1){
+					if(res->row_count > 0){
 						row=mysql_fetch_row(res);
 						//my sock info
 						client_udp.sin_family = AF_INET;
-						client_udp.sin_addr.s_addr = inet_addr(IP);
-						client_udp.sin_port = htons(atoi(row[0]));
+						client_udp.sin_addr.s_addr = inet_addr(row[0]);
+						client_udp.sin_port = htons(atoi(row[1]));
 						sendto(udp_sock,text,strlen(text),0,(struct sockaddr *)&client_udp,sizeof(struct sockaddr_in));
 						memset(text,0x00,100);
-						sprintf(text,"%s %s %s %s\n",IP, row[0],row[1],row[2]);//IP port
+						sprintf(text,"%s %s %s %s\n",row[0], row[1],row[2],row[3]);//IP port
 					}
 				}
 			}
@@ -321,10 +321,10 @@ void req(Arg *arg, char *ID){
 			client_udp.sin_port = htons(atoi(oport));
 
 			printf("export user info %s, IP %s port %s to %s\n",reqID,oIP, oport, ID);
-			printf("signal %s sent to %s %s\n",text, inet_ntoa(client_udp.sin_addr),reqID);
+			printf("signal %s sent to %s %s\n",text, oIP,reqID);
 			sendto(udp_sock,text,strlen(text),0,(struct sockaddr *)&client_udp,sizeof(struct sockaddr_in));
 			memset(query,0x00,150);
-			sprintf(query,"update client set available = \'0\' where ID = \'%s\' and IND = %s;",ID, row[3]);
+			sprintf(query,"update client set available = \'0\' where ID = \'%s\' and IND = %s;",ID, index);
 			if(mysql_query(conn,query) != 0){
 				printf("cannot disable port2\n");
 				return (void )-1;
@@ -416,6 +416,7 @@ void port_update(char *IP, char *ID){
 	pthread_mutex_lock(&udp_mutex);
 	recvfrom(udp_sock,buf,sizeof(buf),0,(struct sockaddr *)&client,&size);
 
+	pthread_mutex_unlock(&udp_mutex);
 	strcpy(pri_IP, strtok(buf," "));
 	strcpy(pri_port , strtok(NULL, " "));
 	strcpy(index, strtok(NULL, " "));
@@ -423,7 +424,7 @@ void port_update(char *IP, char *ID){
 	pthread_mutex_lock(&a_mutex);
 	memset(query,0x00,150);
 	sprintf(query,"select * from client where ID = \'%s\' and IND = %s;",ID, index);
-	if((ret = mysql_query(conn,query)) != 0){
+	if((ret = mysql_query(conn,query)) == 0){
 		res = mysql_store_result(conn);
 		if(res->row_count != 0){
 			memset(query,0x00,150);
@@ -437,10 +438,12 @@ void port_update(char *IP, char *ID){
 				return ;
 			}
 		}
+		printf("port updated %s\n",ID);
+	}
+	else{
+		printf("port update failed 2\n");
 	}
 	pthread_mutex_unlock(&a_mutex);
-	pthread_mutex_unlock(&udp_mutex);
-	printf("port updated %s\n",ID);
 }
 
 int logout(char *ID){
@@ -452,7 +455,7 @@ int logout(char *ID){
 	if(ret != 0)
 		printf("user info delete failed %s\n",ID);
 
-	sprintf(query,"update status set stat = \'0\', socket_number = NULL where ID = \'%s\';",ID);
+	sprintf(query,"update status set stat = \'0\' where ID = \'%s\';",ID);
 	ret = mysql_query(conn,query);
 	if(ret != 0)
 		printf("logout failed %s\n",ID);
