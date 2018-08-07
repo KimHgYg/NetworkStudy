@@ -35,9 +35,9 @@ public class keep_alive extends Thread{
 				sock.send(p);
 				sleep(3000);
 			} catch (IOException e) {
-				e.printStackTrace();
+				System.out.println("interrupted alive");
 			} catch(InterruptedException e) {
-				e.printStackTrace();
+				System.out.println("alive interrupted");
 			}
 		}
 	}

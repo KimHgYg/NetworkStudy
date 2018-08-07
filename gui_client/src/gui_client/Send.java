@@ -68,17 +68,6 @@ public class Send extends Thread{
 		alive.start();
 	}
 	
-	public void logout() {
-		String s = "qpwo";
-		pack = new DatagramPacket(s.getBytes(), s.getBytes().length, ia, target_port);
-		try {
-			sock.send(pack);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-	
 	public void run() {
 		while(true) {
 			if(flag) {
@@ -87,24 +76,26 @@ public class Send extends Thread{
 					public void actionPerformed(ActionEvent e) {
 						// TODO Auto-generated method stub
 						msg = mytext.getText();
-						//mytext.setText("");
+						if(msg.equals(""))
+							return;
+						mytext.setText("");
 						text.append("³ª : "+msg+"\n");
 						text.setCaretPosition(text.getDocument().getLength());
 						pack = new DatagramPacket(msg.getBytes(), msg.length(), ia, target_port);							
 						try {
 							sock.send(pack);
 						} catch (IOException e2) {
-							flag = false;
+							
 						}
 					}
 				});
 			}
-			try {
-				sleep(100);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				break;
-			}
 		}
+	}
+	
+	public void interrupt() {
+		alive.stop();
+		flag = false;
+		System.out.println("³¡!\n");
 	}
 }

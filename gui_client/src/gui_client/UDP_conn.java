@@ -47,7 +47,7 @@ public class UDP_conn extends JFrame{
 	}
 	
 	public void UDP_ready(InetAddress ia, int target_port,InetAddress pia, int target_p_port) throws IOException, InterruptedException {
-		Chatting chat = new Chatting();
+		Chatting chat = new Chatting(this, ID);
 		
 		this.target_port = target_port;
 		this.target_p_port = target_p_port;
@@ -60,7 +60,8 @@ public class UDP_conn extends JFrame{
 			send = new Send(sock, ia, target_port, chat.get_textArea(), chat.get_mytextArea());
 		rec = new Receive(send, sock, this, chat.get_textArea());
 		this.start();
-		//this.Wait();
+		this.Wait();
+		//chat.dispose();
 	}
 	
 	public void re_set(InetAddress ia, int port) {
@@ -113,14 +114,13 @@ public class UDP_conn extends JFrame{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		System.out.println("stoped\n");
 		this.avail = true;
 	}
 	
-	public void stop() throws InterruptedException {
-		send.interrupt();
-		rec.interrupt();
-		send.join();
-		rec.join();
+	public void stop(){
+		if(rec.isAlive())
+			rec.interrupt();
 	}
 	
 	public void invite(String ID) {

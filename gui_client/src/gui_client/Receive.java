@@ -42,12 +42,13 @@ public class Receive extends Thread{
 				sock.receive(pack);
 			} catch (IOException e) {
 				System.out.println(n + "번 째 시도 중...");
+				text.append(n + "번 째 시도중...\n");
+				text.setCaretPosition(text.getDocument().getLength());
 				n++;
 				send.check_ready();
 				continue;
 			}
 			strmsg = new String(bytemsg);
-			//System.out.print(strmsg);
 			if(strmsg.contains("-1")) {
 				while(k < 5) {
 					send.ack();
@@ -55,16 +56,16 @@ public class Receive extends Thread{
 					try {
 						sock.receive(pack);
 						strmsg = new String(bytemsg);
-						//System.out.print(strmsg);
 						sleep(3000);
 					} catch (IOException e) {
 						System.out.println("응답을 기다리는 중 ..." + k);
+						text.append("응답을 기다리는 중 ..." + k + "\n");
+						text.setCaretPosition(text.getDocument().getLength());
 						continue;
 					} catch (InterruptedException e) {
 						e.printStackTrace();
 					}
 					if(strmsg.contains("-2")) {
-						//System.out.println("채팅 연결 완료");
 						text.append("채팅 연결 완료\n");
 						flag = true;
 						send.set_send_on();
@@ -90,22 +91,21 @@ public class Receive extends Thread{
 			try {
 				sock.receive(pack);
 			} catch (IOException e) {
-				send.interrupt();
-				udp.Avail();
-				System.out.println("상대방이 떠났습니다");
+				text.append("상대방이 떠났습니다");
+				text.setCaretPosition(text.getDocument().getLength());
+				this.interrupt();
 				break;
-			} 
+			}
 			strmsg = new String(bytemsg);
 			if(strmsg.contains("-1"))
 				continue;
-			else if(strmsg.contains("qpwo")) {
-				udp.Avail();
-				System.out.println("상대방이 떠났습니다");
-				send.interrupt();
-				break;
-			}
 			text.append("상대방 : " + strmsg + "\n");
 			text.setCaretPosition(text.getDocument().getLength());
 		}
+	}
+	
+	public void interrupt() {
+		flag = false;
+		send.interrupt();
 	}
 }

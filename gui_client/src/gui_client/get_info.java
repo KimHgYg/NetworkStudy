@@ -24,16 +24,9 @@ public class get_info {
 	
 	public int Max_connection = 10;
 	
+	
 	public get_info(InetAddress addr, int port, String serverIP) throws IOException {
-		isa = new InetSocketAddress(addr, port);
-		client = new Socket();
-		client.setReuseAddress(true);
-		client.connect(isa);
-		client.setSoTimeout(0);
-		client.setSoLinger(true, 0);
-		in = new BufferedReader(new InputStreamReader(this.client.getInputStream()));
-		out = new PrintWriter(this.client.getOutputStream(),true);
-		
+		isa = new InetSocketAddress(addr, port);	
 		this.addr = addr;
 		this.serverIP = serverIP;
 		this.udp = new UDP_conn[Max_connection];
@@ -46,6 +39,15 @@ public class get_info {
 		int stat, i;
 		this.ID = ID;
 		this.pswd = pswd;
+		
+		client = new Socket();
+		client.setReuseAddress(true);
+		client.connect(isa);
+		client.setSoTimeout(0);
+		client.setSoLinger(true, 0);
+		in = new BufferedReader(new InputStreamReader(this.client.getInputStream()));
+		out = new PrintWriter(this.client.getOutputStream(),true);
+		
 		out.print('2');
 		out.flush();
 		out.print(this.ID + " " + this.pswd);
@@ -68,14 +70,19 @@ public class get_info {
 		}
 	}
 	
-	public void logout() throws Exception {
+	public void logout(){
 		hb.interrupt();
 		try {
 			in.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		hb.join();
+		try {
+			hb.join();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		out.close();
 		System.out.println("정상적으로 로그아웃 되었습니다");
 	}

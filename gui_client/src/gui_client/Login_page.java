@@ -1,6 +1,7 @@
 package gui_client;
 
 import java.awt.Container;
+import java.awt.DisplayMode;
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -13,6 +14,7 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
 public class Login_page extends JFrame{
@@ -21,7 +23,7 @@ public class Login_page extends JFrame{
 	
 	public Login_page() {
 		super("KKaKKao TTalk");
-		
+				
 		try {
 			gi = new get_info(InetAddress.getByName("52.79.185.101"), 3000, "52.79.185.101");
 		} catch (UnknownHostException e1) {
@@ -30,13 +32,13 @@ public class Login_page extends JFrame{
 			e1.printStackTrace();
 		}
 		
-		setBounds(100, 100, 500, 200);
+		setSize(500, 200);
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		
 		Container contentPane = this.getContentPane();
 		contentPane.setLayout(new FlowLayout());
 		JPanel pane = new JPanel();
-		
+
 		//로그인 버튼
 		JButton Login_button = new JButton("로그인");
 		Login_button.setMnemonic('L');
@@ -46,7 +48,7 @@ public class Login_page extends JFrame{
 		JLabel label_ID = new JLabel("ID : ");
 		
 		//Password 입력
-		JTextField text_PW = new JTextField(10);
+		JPasswordField text_PW = new JPasswordField(10);
 		JLabel label_PW = new JLabel("Password : ");
 		
 		pane.add(label_ID);
@@ -96,9 +98,10 @@ public class Login_page extends JFrame{
 					JOptionPane.showMessageDialog(null, "Wrong Password");
 				}
 				else if(stat == 2){
-					pane.setVisible(false);
-					contentPane.remove(pane);
+					contentPane.removeAll();
 					contentPane.add(menu_pane);
+					revalidate();
+					repaint();
 				}
 			}
 		});
@@ -109,7 +112,11 @@ public class Login_page extends JFrame{
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				// TODO Auto-generated method stub
-				
+				gi.logout();
+				contentPane.removeAll();
+				contentPane.add(pane);
+				revalidate();
+				repaint();
 			}
 		});
 		
@@ -117,10 +124,10 @@ public class Login_page extends JFrame{
 		chat_button.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				//채팅 버튼 클릭 후 화면
-				menu_pane.setVisible(false);
-				chat_pane.setVisible(true);
-				contentPane.remove(menu_pane);
+				contentPane.removeAll();
 				contentPane.add(chat_pane);
+				revalidate();
+				repaint();
 				
 			}
 		});
@@ -133,10 +140,10 @@ public class Login_page extends JFrame{
 					return;
 				}
 				gi.reqStat(reqID);
-				chat_pane.setVisible(false);
-				menu_pane.setVisible(true);
-				contentPane.remove(chat_pane);
+				contentPane.removeAll();
 				contentPane.add(menu_pane);
+				revalidate();
+				repaint();
 			}
 		});
 		
