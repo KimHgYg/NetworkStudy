@@ -204,7 +204,6 @@ int client_stat(Arg *hb, char *ID) {
 			memset(text, 0x00, 30);
 			sprintf(text, "%s\n", inet_ntoa(hb->client_sock.sin_addr));
 			write(((Arg *)hb)->sock, text, strlen(text));
-			printf("HB %d port %d\n", ((Arg *)hb)->sock, ntohs(((Arg *)hb)->client_sock.sin_port));
 		}
 		//error
 		else if (stat == '0') {
@@ -236,7 +235,7 @@ void port_update(char *IP, char *ID) {
 	char buf[25] = "";
 	char pri_IP[15] = "";
 	char pri_port[5] = "";
-	char query[150] = "";
+	char query[200] = "";
 	char index[3];
 	int port, ret;
 	int size = sizeof(struct sockaddr_in);
@@ -259,7 +258,11 @@ void port_update(char *IP, char *ID) {
 		res = mysql_store_result(conn);
 		if (res->row_count != 0) {
 			memset(query, 0x00, 150);
-			sprintf(query, "update client set IP = \'%s\', port = \'%d\', private_IP = \'%s\', private_port = \'%s\' where ID = \'%s\' and IND = %s;", IP, port, pri_IP, pri_port, ID, index);
+			sprintf(query, "update client set IP = \'%s\', port = \'%d\', private_IP = \'%s\', private_port = \'%s\', available = \'1\' where ID = \'%s\' and IND = %s;", IP, port, pri_IP, pri_port, ID, index);
+			if(mysql_query(conn,query) != 0){
+				printf("port update failed 3\n");
+				return;
+			}
 		}
 		else {
 			memset(query, 0x00, 150);
@@ -269,7 +272,6 @@ void port_update(char *IP, char *ID) {
 				return;
 			}
 		}
-		printf("port updated %s\n", ID);
 	}
 	else {
 		printf("port update failed 2\n");
