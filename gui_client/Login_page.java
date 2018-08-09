@@ -85,6 +85,7 @@ public class Login_page extends JFrame{
 			public void actionPerformed(ActionEvent e) {
 				String ID = text_ID.getText();
 				String pswd = text_PW.getText();
+				text_PW.setText("");
 				int stat = 0;
 				try {
 					stat = gi.login(ID, pswd);
@@ -140,6 +141,7 @@ public class Login_page extends JFrame{
 					return;
 				}
 				gi.reqStat(reqID);
+				req_ID_text.setText("");
 				contentPane.removeAll();
 				contentPane.add(menu_pane);
 				revalidate();
