@@ -8,6 +8,7 @@ import java.awt.GridLayout;
 import java.awt.event.*;
 
 import javax.swing.JFrame;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
@@ -24,10 +25,16 @@ public class Chatting extends JFrame{
 		Container chat = this.getContentPane();
 		
 		setBounds(100,100,250,600);
-		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+		setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		addWindowListener(new WindowAdapter() {
-			public void windowClosed(WindowEvent e) {
-				udp.stop();
+			public void windowClosing(WindowEvent e) {
+				String obj[] = {"Yes","No"};
+				int prompt = JOptionPane.showOptionDialog(null, "채팅을 끝내시겠습니까?", null, 
+						JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE, null, obj, obj[1]);
+				if(prompt == 0) {
+					udp.stop();
+					dispose();
+				}
 			}
 		});
 		
