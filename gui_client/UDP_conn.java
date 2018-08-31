@@ -1,5 +1,6 @@
 package gui_client;
 
+import java.beans.Statement;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.DatagramPacket;
@@ -7,6 +8,8 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.sql.Connection;
+import java.sql.SQLException;
 
 import javax.swing.JFrame;
 
@@ -21,7 +24,7 @@ public class UDP_conn extends JFrame{
 	private int target_port, target_p_port;
 	private String ID;
 	private boolean avail = true;
-	
+	private Connection conn;
 	public int index;
 	
 	private Send send;
@@ -35,43 +38,70 @@ public class UDP_conn extends JFrame{
 	
 	//constructor에는 서버로 한번 보내고 상대 정보 받은 후에 그 정보로  통신?
 	//사용자가 움직여서 정보 바뀌었을 때는 어떻게 할지 생각
-	public UDP_conn(get_info gi, InetAddress ia, String ID, int index) throws SocketException {
+	public UDP_conn(get_info gi, InetAddress ia, String ID, int index, Connection conn) throws SocketException {
 		sock = new DatagramSocket();
 		this.server_ia = ia;
 		this.gi = gi;
 		this.ID = ID;
 		this.index = index;
+		this.conn = conn;
 		sock.setSoTimeout(5000);
 		gs = new get_signal(sock, this);
 		gs.start();
 	}
 	
-	public void UDP_ready(InetAddress ia, int target_port,InetAddress pia, int target_p_port) throws IOException, InterruptedException {
-		Chatting chat = new Chatting(this, ID);
-		
+	public void UDP_ready(InetAddress ia, int target_port,InetAddress pia, int target_p_port, String opp_ID) throws IOException, InterruptedException {
+		System.out.println("I'm "+ID);
+		String sql = "CREATE TABLE IF NOT EXISTS " + opp_ID + " (\n"
+				+ " id text NOT NULL,\n"
+				+ " chat text NOT NULL\n"
+				+ ");";
+		try {
+			java.sql.Statement stmt = conn.createStatement();
+			stmt.execute(sql);
+			System.out.println("table created\n");
+		}catch (Exception e) {
+			// TODO: handle exception
+			System.out.println("table create failed\n");
+		}
+		Chatting chat = new Chatting(this, opp_ID, conn);
 		this.target_port = target_port;
 		this.target_p_port = target_p_port;
 		this.pia = pia;
 		this.ia = ia;
 		
 		if(pia.getHostName().equals(InetAddress.getLocalHost().getHostName())) 
-			send = new Send(sock, pia, target_p_port, chat.get_textArea(), chat.get_mytextArea());
+			send = new Send(sock, pia, target_p_port, chat.get_textArea(), chat.get_mytextArea(), conn, opp_ID);
 		else
-			send = new Send(sock, ia, target_port, chat.get_textArea(), chat.get_mytextArea());
-		rec = new Receive(send, sock, this, chat.get_textArea());
+			send = new Send(sock, ia, target_port, chat.get_textArea(), chat.get_mytextArea(), conn, opp_ID);
+		rec = new Receive(send, sock, this, chat.get_textArea(), conn, opp_ID);
 		this.start();
 		this.Wait();
 		//chat.dispose();
 	}
-	
-	public void re_set(InetAddress ia, int port) {
+	//채팅 중 IP등 바뀔 때
+	/*public void re_set(InetAddress ia, int port) {
 		this.ia = ia;
 		this.target_port = port;
 		send.re_set(ia, port);
+	}*/
+	
+	/*public void reConnect(InetAddress ia, int port) {
+	System.out.println("연결을 재설정 합니다...");
+	try {
+		gi.reqStat(ID);
+	} catch (Exception e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
 	}
+}*/
 	
 	public String get_myIP() {
 		return this.sock.getLocalAddress().getHostAddress();
+	}
+	
+	public String get_myID() {
+		return this.ID;
 	}
 	
 	public void update_port_to_server(PrintWriter out) {
@@ -97,15 +127,7 @@ public class UDP_conn extends JFrame{
 		send.start();
 	}
 
-	/*public void reConnect(InetAddress ia, int port) {
-		System.out.println("연결을 재설정 합니다...");
-		try {
-			gi.reqStat(ID);
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}*/
+	
 	
 	public void Wait() {
 		try {

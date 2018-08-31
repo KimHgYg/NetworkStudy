@@ -5,6 +5,10 @@ import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.io.BufferedReader;
 import java.io.PrintWriter;
 
@@ -24,6 +28,7 @@ public class get_info {
 	
 	public int Max_connection = 10;
 	
+	private Connection conn = null;
 	
 	public get_info(InetAddress addr, int port, String serverIP) throws IOException {
 		isa = new InetSocketAddress(addr, port);	
@@ -61,8 +66,23 @@ public class get_info {
 			return 1;
 		}
 		else {
+			
+			String url = "jdbc:sqlite:C:/sqlite/db/chat_log_" + ID + ".db";
+			try{
+				
+				conn = DriverManager.getConnection(url);
+				System.out.println("DB connected\n");
+			}catch (Exception e) {
+				// TODO: handle exception
+				if(conn != null) {
+					DatabaseMetaData meta = conn.getMetaData();
+					conn = DriverManager.getConnection(url);
+					System.out.println("DB created and connected\n");
+				}
+			}
+			
 			for(i = 0 ; i < Max_connection ; i ++) {
-				udp[i]= new UDP_conn(this, addr, ID, i);
+				udp[i]= new UDP_conn(this, addr, ID, i,conn);
 			}
 			hb = new heartbeat(this, udp, out, in, addr);
 			hb.start();
@@ -84,17 +104,23 @@ public class get_info {
 			e.printStackTrace();
 		}
 		out.close();
+		try {
+			conn.close();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		System.out.println("정상적으로 로그아웃 되었습니다");
 	}
 	
-	public int reqStat(String ID) {
+	public int reqStat(String req_ID) {
 		String stat = null;
 		int index = this.get_index();
 		if(index == -1) {
 			System.out.println("더 이상 채팅 연결을 할 수 없습니다");
 			return -1;
 		}
-		out.print('3' + "" +'0' + "" + ID + "" + " " + "" + index);
+		out.print('3' + "" +'0' + "" + req_ID + "" + " " + "" + index + "" + " " + ID);
 		out.flush();
 		try {
 			stat = in.readLine();

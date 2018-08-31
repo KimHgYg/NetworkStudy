@@ -6,6 +6,10 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.awt.event.*;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
@@ -19,8 +23,8 @@ public class Chatting extends JFrame{
 	private JTextArea text;
 	private JTextField my_text;
 	
-	public Chatting(UDP_conn udp, String ID){
-		super("Chat with " + ID);
+	public Chatting(UDP_conn udp, String ID, Connection conn){
+		super("chat with " + ID);
 		
 		Container chat = this.getContentPane();
 		
@@ -45,6 +49,7 @@ public class Chatting extends JFrame{
 		text.setSize(200, 300);
 		my_text = new JTextField();
 		my_text.setEditable(true);
+		text.setEditable(false);
 		JScrollPane bar = new JScrollPane(text);
 		bar.setPreferredSize(new Dimension(200, 300));
 		text.setLineWrap(true);
@@ -53,6 +58,18 @@ public class Chatting extends JFrame{
 		pane.add(my_text, "South");
 		
 		chat.add(pane,"Center");
+		
+		String sql = "SELECT id, chat FROM " + ID;
+		try {
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+			while(rs.next()){
+				text.append(rs.getString("id") + " : " + rs.getString("chat"));
+			}
+		} catch (SQLException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
 		setVisible(true);
 	}
 	

@@ -8,6 +8,9 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.Scanner;
 
 import javax.swing.JOptionPane;
@@ -27,13 +30,17 @@ public class Send extends Thread{
 	private JTextField mytext;
 	private keep_alive alive;
 	private UDP_conn UDP;
+	private Connection conn;
+	private String ID;
 	
-	public Send(DatagramSocket sock, InetAddress ia, int target_port, JTextArea text, JTextField mytext) {
+	public Send(DatagramSocket sock, InetAddress ia, int target_port, JTextArea text, JTextField mytext, Connection conn, String ID) {
 		this.sock = sock;
+		this.conn = conn;
 		this.ia = ia;
 		this.target_port = target_port;
 		this.text = text;
 		this.mytext = mytext;
+		this.ID = ID;
 		in = new Scanner(System.in);
 		
 		mytext.addActionListener(new ActionListener() {
@@ -104,6 +111,18 @@ public class Send extends Thread{
 		} catch (IOException e2) {
 			
 		}
+		String sql = "INSERT INTO " + ID + "(id, chat) VALUES(?,?)";
+		PreparedStatement pstmt;
+		try {
+			pstmt = conn.prepareStatement(sql);
+			pstmt.setString(1, "³ª");
+			pstmt.setString(2, msg);
+			pstmt.executeUpdate();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 	}
 	
 	public void interrupt() {

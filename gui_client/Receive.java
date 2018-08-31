@@ -6,6 +6,9 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.Scanner;
 import java.util.concurrent.TimeoutException;
 
@@ -22,9 +25,13 @@ public class Receive extends Thread{
 	private Scanner in;
 	private UDP_conn udp;
 	private JTextArea text;
+	private Connection conn;
+	private String ID;
 	
-	public Receive(Send send, DatagramSocket sock, UDP_conn udp, JTextArea text) {
+	public Receive(Send send, DatagramSocket sock, UDP_conn udp, JTextArea text, Connection conn, String ID) {
 		this.sock = sock;
+		this.conn = conn;
+		this.ID = ID;
 		bytemsg = new byte[200];
 		this.send = send;
 		this.in= new Scanner(System.in);
@@ -98,10 +105,22 @@ public class Receive extends Thread{
 			}
 			strmsg = (new String(bytemsg));
 			strmsg = strmsg.substring(0, strmsg.length());
-			if(strmsg.contains("-1"))
+			String msg = strmsg.split("\n")[0];
+			if(strmsg.contains("-1") || strmsg.contains("-2"))
 				continue;
-			text.append("상대방 : " + strmsg.split("\n")[0] + "\n");
+			text.append("상대방 : " + msg + "\n");
 			text.setCaretPosition(text.getDocument().getLength());
+			String sql = "INSERT INTO " + ID + "(id, chat) VALUES(?,?)";
+			PreparedStatement pstmt;
+			try {
+				pstmt = conn.prepareStatement(sql);
+				pstmt.setString(1, "상대방");
+				pstmt.setString(2, msg+"\n");
+				pstmt.executeUpdate();
+			} catch (SQLException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	}
 	
