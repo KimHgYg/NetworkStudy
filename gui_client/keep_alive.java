@@ -25,7 +25,7 @@ public class keep_alive extends Thread{
 	}
 
 	public void run() {
-		s = "-1";
+		s = "-1 " + ID;
 		byte[] buf = s.getBytes();
 		byte[] buf2 = new byte[100];
 		p = new DatagramPacket(buf, buf.length,ia,port);

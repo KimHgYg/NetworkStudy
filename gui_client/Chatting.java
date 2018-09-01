@@ -22,12 +22,13 @@ public class Chatting extends JFrame{
 
 	private JTextArea text;
 	private JTextField my_text;
+	private Connection conn;
 	
-	public Chatting(UDP_conn udp, String ID, Connection conn){
-		super("chat with " + ID);
+	public Chatting(UDP_conn udp, Connection conn){
+		super("chat preparing");
 		
 		Container chat = this.getContentPane();
-		
+		this.conn = conn;
 		setBounds(100,100,250,600);
 		setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		addWindowListener(new WindowAdapter() {
@@ -59,6 +60,11 @@ public class Chatting extends JFrame{
 		
 		chat.add(pane,"Center");
 		
+		
+		setVisible(true);
+	}
+	
+	public void set_chat_log(String ID) {
 		String sql = "SELECT id, chat FROM " + ID;
 		try {
 			Statement stmt = conn.createStatement();
@@ -70,7 +76,6 @@ public class Chatting extends JFrame{
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
-		setVisible(true);
 	}
 	
 	public JTextArea get_textArea() {

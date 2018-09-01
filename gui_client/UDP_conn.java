@@ -13,7 +13,6 @@ import java.sql.SQLException;
 
 import javax.swing.JFrame;
 
-
 public class UDP_conn extends JFrame{
 	
 	private DatagramSocket sock;	
@@ -26,6 +25,12 @@ public class UDP_conn extends JFrame{
 	private boolean avail = true;
 	private Connection conn;
 	public int index;
+	
+	private boolean group = false;
+	
+	private String public_IP;
+	
+	private user_list[] ul;
 	
 	private Send send;
 	private Receive rec;
@@ -45,38 +50,30 @@ public class UDP_conn extends JFrame{
 		this.ID = ID;
 		this.index = index;
 		this.conn = conn;
+		ul[0] = new user_list();
 		sock.setSoTimeout(5000);
 		gs = new get_signal(sock, this);
 		gs.start();
 	}
 	
-	public void UDP_ready(InetAddress ia, int target_port,InetAddress pia, int target_p_port, String opp_ID) throws IOException, InterruptedException {
+	public void UDP_ready(InetAddress ia, int target_port,InetAddress pia, int target_p_port, String opp_ID, String group_flag) throws IOException, InterruptedException {
 		System.out.println("I'm "+ID);
-		String sql = "CREATE TABLE IF NOT EXISTS " + opp_ID + " (\n"
-				+ " id text NOT NULL,\n"
-				+ " chat text NOT NULL\n"
-				+ ");";
-		try {
-			java.sql.Statement stmt = conn.createStatement();
-			stmt.execute(sql);
-			System.out.println("table created\n");
-		}catch (Exception e) {
-			// TODO: handle exception
-			System.out.println("table create failed\n");
-		}
-		Chatting chat = new Chatting(this, opp_ID, conn);
+		
+		Chatting chat = new Chatting(this, conn);
 		this.target_port = target_port;
 		this.target_p_port = target_p_port;
 		this.pia = pia;
 		this.ia = ia;
-		
-		if(pia.getHostName().equals(InetAddress.getLocalHost().getHostName())) 
-			send = new Send(sock, pia, target_p_port, chat.get_textArea(), chat.get_mytextArea(), conn, opp_ID);
-		else
-			send = new Send(sock, ia, target_port, chat.get_textArea(), chat.get_mytextArea(), conn, opp_ID);
-		rec = new Receive(send, sock, this, chat.get_textArea(), conn, opp_ID);
-		this.start();
-		this.Wait();
+		if(avail == true) {
+			if(pia.getHostName().equals(InetAddress.getLocalHost().getHostName())) 
+				send = new Send(sock, pia, this, target_p_port, chat.get_textArea(), chat.get_mytextArea(), conn, ul);
+			else
+				send = new Send(sock, ia, this, target_port, chat.get_textArea(), chat.get_mytextArea(), conn, ul);
+			rec = new Receive(send, sock, this, chat.get_textArea(), conn, ul, chat);
+			this.start();
+			this.Wait();
+		}
+		send.insert_user_list(opp_ID, ia, pia, target_port, target_p_port);
 		//chat.dispose();
 	}
 	//채팅 중 IP등 바뀔 때
@@ -95,6 +92,13 @@ public class UDP_conn extends JFrame{
 		e.printStackTrace();
 	}
 }*/
+	public void set_my_Public_IP(String IP) {
+		this.public_IP = IP;
+	}
+	
+	public String get_my_Public_IP() {
+		return this.public_IP;
+	}
 	
 	public String get_myIP() {
 		return this.sock.getLocalAddress().getHostAddress();
@@ -146,10 +150,10 @@ public class UDP_conn extends JFrame{
 			rec.interrupt();
 	}
 	
-	public void invite(String ID) {
+	public void invite(String ID, user_list ul) {
 		byte[] buf = new byte[100];
 		DatagramPacket p = new DatagramPacket(buf, buf.length);
-		gi.reqStat(ID);
+		gi.reqStat(ID, "true");
 		try {
 			sock.receive(p);
 		} catch (IOException e) {

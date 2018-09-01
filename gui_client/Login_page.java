@@ -140,7 +140,7 @@ public class Login_page extends JFrame{
 				if(reqID.equals("")) {
 					return;
 				}
-				gi.reqStat(reqID);
+				gi.reqStat(reqID, "false");
 				req_ID_text.setText("");
 				contentPane.removeAll();
 				contentPane.add(menu_pane);

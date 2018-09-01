@@ -67,7 +67,8 @@ void *get_connection(void *arg) {
 void req(Arg *arg, char *ID) {
 	char query[150] = "";
 	char reqID[30] = "";
-	char myID[30] = "";
+	char group_flag[8] = "";
+	char my_ID[30] = "";
 	char option = '0';
 	char text[200] = "";
 	char IP[30] = "";
@@ -95,7 +96,8 @@ void req(Arg *arg, char *ID) {
 		}
 		strcpy(reqID, strtok(tmp, " "));
 		strcpy(index, strtok(NULL, " "));
-		strcpy(myID,strtok(NULL, " "));
+		strcpy(my_ID, strtok(NULL, " "));
+		strcpy(group_flag,strtok(NULL, " "));
 		sprintf(query, "select stat from status where ID = \'%s\';", reqID);
 		pthread_mutex_lock(&a_mutex);
 		if ((ret = mysql_query(conn, query)) != 0) {
@@ -121,7 +123,7 @@ void req(Arg *arg, char *ID) {
 					row = mysql_fetch_row(res);
 					//oppnent info
 					strcpy(oIP, row[0]); strcpy(oport, row[1]); strcpy(opIP, row[2]); strcpy(opport, row[3]); strcpy(oindex, row[4]);
-					sprintf(text, "%s %s %s %s %s\n", oIP, oport, opIP, opport, reqID);
+					sprintf(text, "%s %s %s %s %s %s\n", oIP, oport, opIP, opport, reqID, group_flag);
 					memset(query, 0x00, 150);
 					sprintf(query, "update client set available = \'0\' where ID = \'%s\' and IND = %s;", reqID, oindex);
 					if ((ret = mysql_query(conn, query)) != 0) {
@@ -144,7 +146,7 @@ void req(Arg *arg, char *ID) {
 						client_udp.sin_port = htons(atoi(row[1]));
 						sendto(udp_sock, text, strlen(text), 0, (struct sockaddr *)&client_udp, sizeof(struct sockaddr_in));
 						memset(text, 0x00, 100);
-						sprintf(text, "%s %s %s %s %s\n", row[0], row[1], row[2], row[3], myID);//IP port
+						sprintf(text, "%s %s %s %s %s %s\n", row[0], row[1], row[2], row[3], my_ID, group_flag);//IP port
 					}
 				}
 			}

@@ -113,14 +113,14 @@ public class get_info {
 		System.out.println("정상적으로 로그아웃 되었습니다");
 	}
 	
-	public int reqStat(String req_ID) {
+	public int reqStat(String req_ID, String group_flag) {
 		String stat = null;
 		int index = this.get_index();
 		if(index == -1) {
 			System.out.println("더 이상 채팅 연결을 할 수 없습니다");
 			return -1;
 		}
-		out.print('3' + "" +'0' + "" + req_ID + "" + " " + "" + index + "" + " " + ID);
+		out.print('3' + "" +'0' + "" + req_ID + "" + " " + "" + index + "" + " " + ID + " " + group_flag);
 		out.flush();
 		try {
 			stat = in.readLine();
