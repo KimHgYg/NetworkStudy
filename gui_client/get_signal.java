@@ -38,6 +38,7 @@ public class get_signal extends Thread{
 					DatagramPacket p = new DatagramPacket(buf, buf.length);
 					sock.receive(p);
 					String byteTostring = new String(buf); //IP, port
+					System.out.println("Signal : " + byteTostring);
 					tmp = byteTostring.split(" |\n");
 					System.out.println("got signal! " + tmp[0] + " " + tmp[1] + "  I'm this : " + sock.getLocalPort());
 					System.out.print(udp.index);
@@ -47,7 +48,7 @@ public class get_signal extends Thread{
 					continue;
 				} catch (InterruptedException e) {
 					e.printStackTrace();
-				} 
+				}
 			}
 		}
 	}

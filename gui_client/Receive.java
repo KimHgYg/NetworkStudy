@@ -6,9 +6,11 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Scanner;
 import java.util.concurrent.TimeoutException;
 
@@ -21,12 +23,12 @@ public class Receive extends Thread{
 	private byte[] bytemsg;
 	private Send send;
 	private String strmsg;
-	private boolean flag = true, flag_1 = true, flag_2 = false;
+	private boolean flag = true, flag_1 = true, flag_2 = false, Switch = true;
 	private Scanner in;
 	private UDP_conn udp;
 	private JTextArea text;
 	private Connection conn;
-	private String ID, opp_ID, user_list;
+	private String opp_ID, user_list;
 	
 	private Chatting chat;
 	private user_list[] ul;
@@ -129,38 +131,77 @@ public class Receive extends Thread{
 				}
 			}
 			while(flag_2) {
-				bytemsg = new byte[100];
-				pack = new DatagramPacket(bytemsg, bytemsg.length);
-				try {
-					sock.receive(pack);
-				} catch (IOException e) {
-					text.append("상대방이 떠났습니다");
+				if(Switch) {
+					bytemsg = new byte[100];
+					pack = new DatagramPacket(bytemsg, bytemsg.length);
+					try {
+						sock.receive(pack);
+					} catch (IOException e) {
+						text.append("상대방이 떠났습니다");
+						text.setCaretPosition(text.getDocument().getLength());
+						this.interrupt();
+						break;
+					}
+					strmsg = (new String(bytemsg));
+					System.out.println("receive : " + strmsg);
+					strmsg = strmsg.substring(0, strmsg.length());
+					//System.out.println(strmsg);
+					String msg = strmsg.split("\n")[0];
+					//System.out.println(strmsg);
+					//System.out.println(msg);
+					if(strmsg.contains("-1") || strmsg.contains("-2"))
+						continue;
+					else if(strmsg.contains("-3")) {
+						String sql = "ALTER TABLE " + user_list + " RENAME";
+						try {
+							System.out.println("RECEIVE!!!!!!!!!!!!!!!!!");
+							send.insert_user_list(msg.split(" ", 5)[0], InetAddress.getByName(msg.split(" ", 5)[1]), InetAddress.getByName(msg.split(" ", 5)[2]), Integer.parseInt(msg.split(" ", 5)[3]), Integer.parseInt(msg.split(" ", 5)[4]));
+							text.append(msg.split(" ", 1)[0]+"가 채팅방에 들어왔습니다.\n");
+							sql = sql + user_list;
+							Statement stmt = conn.createStatement();
+							stmt.execute(sql);
+							send.send("-4 " + udp.get_myID() + " " + udp.get_my_Public_IP() + " " + InetAddress.getLocalHost().getHostAddress()+ " " + Integer.toString(udp.get_my_Public_port()) + " " + Integer.toString(sock.getLocalPort()));
+						} catch (NumberFormatException | UnknownHostException | SQLException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+						continue;
+					}
+					else if(strmsg.contains("-4")) {
+						try {
+							send.insert_user_list(msg.split(" ", 5)[0], InetAddress.getByName(msg.split(" ", 5)[1]), InetAddress.getByName(msg.split(" ", 5)[2]), Integer.parseInt(msg.split(" ", 5)[3]), Integer.parseInt(msg.split(" ", 5)[4]));
+						} catch (NumberFormatException | UnknownHostException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+					}
+					opp_ID = msg.split(" ", 2)[0];
+					msg = msg.split(" ", 2)[1];
+					text.append(opp_ID + " : " + msg + "\n");
 					text.setCaretPosition(text.getDocument().getLength());
-					this.interrupt();
-					break;
-				}
-				strmsg = (new String(bytemsg));
-				strmsg = strmsg.substring(0, strmsg.length());
-				String msg = strmsg.split("\n")[0];
-				if(strmsg.contains("-1") || strmsg.contains("-2"))
-					continue;
-				opp_ID = msg.split(" ", 2)[0];
-				msg = msg.split(" ", 2)[1];
-				text.append(opp_ID + " : " + msg + "\n");
-				text.setCaretPosition(text.getDocument().getLength());
-				String sql = "INSERT INTO " + user_list + "(id, chat) VALUES(?,?)";
-				PreparedStatement pstmt;
-				try {
-					pstmt = conn.prepareStatement(sql);
-					pstmt.setString(1, opp_ID);
-					pstmt.setString(2, msg+"\n");
-					pstmt.executeUpdate();
-				} catch (SQLException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+					String sql = "INSERT INTO " + user_list + "(id, chat) VALUES(?,?)";
+					PreparedStatement pstmt;
+					try {
+						pstmt = conn.prepareStatement(sql);
+						pstmt.setString(1, opp_ID);
+						pstmt.setString(2, msg+"\n");
+						pstmt.executeUpdate();
+					} catch (SQLException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 				}
 			}
 		}
+	}
+	
+	public void Pause() {
+		Switch = false;
+	}
+	
+	public void Resume() {
+		Switch = true;
+		this.notifyAll();
 	}
 	
 	public void interrupt() {

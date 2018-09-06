@@ -42,6 +42,7 @@ public class Send extends Thread{
 	private Connection conn;
 	private String myID, opp_ID, list;
 	private user_list[] ul;
+	private Receive rec;
 	
 	private String user_list;
 	
@@ -115,15 +116,29 @@ public class Send extends Thread{
 			public void actionPerformed(ActionEvent e) {
 				// TODO Auto-generated method stub
 				name = JOptionPane.showInputDialog(chat, "초대할 사용자의 ID를 입력해주세요",null);
-				if(group == false) {
+				/*if(group == false) {
 					group = true;
 				}
 				else {
 					udp.sig_On();
 					gi.reqStat(name, "true");
+				}*/
+				//테스트용 완성 후 윗 코드로 대체할것
+				udp.sig_On();
+				//rec.Pause();
+				try{
+					rec.suspend();
+				}catch(Exception ex){
+					ex.printStackTrace();
 				}
+				//alive.Off();
+				gi.reqStat(name, "true");
 			}
 		});
+	}
+	
+	public void set_rec(Receive rec) {
+		this.rec = rec;
 	}
 	
 	public void check_ready() {
@@ -149,6 +164,11 @@ public class Send extends Thread{
 		} catch(IOException e) {
 			e.printStackTrace();
 		}
+	}
+	
+	public void Resume() {
+		alive.On();
+		rec.resume();
 	}
 	
 	public void set_send_on() {
@@ -181,14 +201,16 @@ public class Send extends Thread{
 	}
 	
 	public void insert_user_list(String ID, InetAddress pub_IP, InetAddress pri_IP, int pub_port, int pri_port) {
+		int i = 0;
+		while(ul[i] != null) {
+			if(ul[i].ID.equals(ID)) {
+				return;
+			}
+			i++;
+		}
 		ul[max] = new user_list(ID, pub_IP, pri_IP, pub_port, pri_port);
-		/*ul[max].ID = new String(ID);
-		ul[max].pub_IP = pub_IP;
-		ul[max].pub_port = pub_port;
-		ul[max].pri_IP = pri_IP;
-		ul[max].pri_port = pri_port;*/
 		max++;
-		this.user_list = this.make_user_list();
+		user_list = make_user_list();
 	}
 	
 	public void send(String msg) {

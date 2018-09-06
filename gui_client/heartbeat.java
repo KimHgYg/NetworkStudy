@@ -52,7 +52,8 @@ public class heartbeat extends Thread{
 					//내 정보 바꼈을 때 -> 그냥 주기적으로
 					for(int i = 0 ;i < max_connection; i ++) {
 						UDP[i].update_port_to_server(beat_out);
-						UDP[i].set_my_Public_IP(tmp);
+						UDP[i].set_my_Public_IP(tmp.split(" ")[0]);
+						UDP[i].set_my_Public_port(Integer.parseInt(tmp.split(" ")[1]));
 					}
 					sleep(3000);
 			}

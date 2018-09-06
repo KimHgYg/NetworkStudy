@@ -29,6 +29,7 @@ public class UDP_conn extends JFrame{
 	private boolean group = false;
 	
 	private String public_IP;
+	private int public_port;
 
 	private int max_user = 10;
 	private user_list[] ul;
@@ -71,12 +72,18 @@ public class UDP_conn extends JFrame{
 			else
 				send = new Send(gi, sock, ia, this, target_port, chat, conn, ul, ID);
 			rec = new Receive(send, sock, this, chat.get_textArea(), conn, ul, chat);
+			send.set_rec(rec);
 			send.insert_user_list(opp_ID, ia, pia, target_port, target_p_port);
 			this.start();
 			this.Wait();
 		}
 		else {
+			send.Resume();
+			System.out.println("resume ÈÄ");
+			send.send("-3 " + opp_ID + " " + ia.getHostAddress() + " " + pia.getHostAddress() + " " + Integer.toString(target_port) + " " + Integer.toString(target_p_port) );
+			System.out.println("-3 send ÈÄ");
 			send.insert_user_list(opp_ID, ia, pia, target_port, target_p_port);
+			send.send("-4 " + ID + " " + public_IP + " " + InetAddress.getLocalHost().getHostAddress()+ " " + Integer.toString(public_port) + " " + Integer.toString(sock.getLocalPort()));
 			this.sig_Off();
 			group = true;
 		}
@@ -102,8 +109,16 @@ public class UDP_conn extends JFrame{
 		this.public_IP = IP;
 	}
 	
+	public void set_my_Public_port(int port) {
+		this.public_port = port;
+	}
+	
 	public String get_my_Public_IP() {
 		return this.public_IP;
+	}
+	
+	public int get_my_Public_port() {
+		return this.public_port;
 	}
 	
 	public String get_myIP() {

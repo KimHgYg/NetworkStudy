@@ -13,6 +13,8 @@ public class keep_alive extends Thread{
 	private int port, n = 0;
 	private String s;
 	private Send send;
+
+	private boolean flag = true;
 	
 	public keep_alive(DatagramSocket sock, InetAddress ia, int port, Send send) {
 		this.sock = sock;
@@ -25,15 +27,25 @@ public class keep_alive extends Thread{
 		this.ia = ia;
 		this.port= port;
 	}
+	
+	public void Off() {
+		flag = false;
+	}
+	
+	public void On() {
+		flag = true;
+	}
 
 	public void run() {
 		
 		while(true) {
-			try {
-				send.send("-1");
-				sleep(3000);
-			} catch(InterruptedException e) {
-				System.out.println("alive interrupted");
+			if(flag) {
+				try {
+					send.send("-1");
+					sleep(3000);
+				} catch(InterruptedException e) {
+					System.out.println("alive interrupted");
+				}
 			}
 		}
 	}
