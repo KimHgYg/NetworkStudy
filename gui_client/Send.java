@@ -14,6 +14,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Scanner;
 
+import javax.swing.JButton;
 import javax.swing.JOptionPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
@@ -28,12 +29,18 @@ public class Send extends Thread{
 	private int target_port;
 	private boolean flag = false;
 	private boolean group = false;
+	
+	private String name;
+	
 	private JTextArea text;
 	private JTextField mytext;
+	private JButton add_but;
+	
 	private keep_alive alive;
 	private UDP_conn UDP;
+	private get_info gi;
 	private Connection conn;
-	private String ID, opp_ID, list;
+	private String myID, opp_ID, list;
 	private user_list[] ul;
 	
 	private String user_list;
@@ -70,14 +77,17 @@ public class Send extends Thread{
 			}
 		});
 	}*/
-	public Send(DatagramSocket sock, InetAddress ia, UDP_conn udp, int target_port, JTextArea text, JTextField mytext, Connection conn, user_list[] ul) {
+	public Send(get_info gi, DatagramSocket sock, InetAddress ia, UDP_conn udp, int target_port, Chatting chat, Connection conn, user_list[] ul, String myID) {
 		this.sock = sock;
 		this.conn = conn;
 		this.ia = ia;
 		this.target_port = target_port;
-		this.text = text;
-		this.mytext = mytext;
-		this.ID = ID;
+		this.text = chat.get_textArea();
+		this.mytext = chat.get_mytextArea();
+		this.add_but = chat.get_invite_button();
+		this.myID = myID;
+		this.ul = ul;
+		this.gi = gi;
 		in = new Scanner(System.in);
 		
 		mytext.addActionListener(new ActionListener() {
@@ -95,14 +105,29 @@ public class Send extends Thread{
 				else {
 					text.append("아직 연결되지 않았습니다..."+"\n");
 					text.setCaretPosition(text.getDocument().getLength());
+				}				
+			}
+		});
+		
+		add_but.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				// TODO Auto-generated method stub
+				name = JOptionPane.showInputDialog(chat, "초대할 사용자의 ID를 입력해주세요",null);
+				if(group == false) {
+					group = true;
 				}
-				
+				else {
+					udp.sig_On();
+					gi.reqStat(name, "true");
+				}
 			}
 		});
 	}
 	
 	public void check_ready() {
-		String s = "-1" + " " + ID;
+		String s = "-1" + " " + myID;
 		pack = new DatagramPacket(s.getBytes(), s.getBytes().length, ia, target_port);
 		try {
 			sock.send(pack);
@@ -128,7 +153,7 @@ public class Send extends Thread{
 	
 	public void set_send_on() {
 		this.flag = true;
-		alive = new keep_alive(sock, ia, target_port);
+		alive = new keep_alive(sock, ia, target_port, this);
 		alive.start();
 	}
 	
@@ -148,7 +173,7 @@ public class Send extends Thread{
 		String user_list = null;
 		int i = 0;
 		while(true) {
-			if(ul[i].ID==null)
+			if(ul[i]==null)
 				break;
 			user_list = user_list + "_" + ul[i++].ID;
 		}
@@ -156,21 +181,22 @@ public class Send extends Thread{
 	}
 	
 	public void insert_user_list(String ID, InetAddress pub_IP, InetAddress pri_IP, int pub_port, int pri_port) {
-		ul[max].ID = ID;
+		ul[max] = new user_list(ID, pub_IP, pri_IP, pub_port, pri_port);
+		/*ul[max].ID = new String(ID);
 		ul[max].pub_IP = pub_IP;
 		ul[max].pub_port = pub_port;
 		ul[max].pri_IP = pri_IP;
-		ul[max].pri_port = pri_port;
+		ul[max].pri_port = pri_port;*/
 		max++;
 		this.user_list = this.make_user_list();
 	}
 	
 	public void send(String msg) {
-		String smsg = ID + msg;
+		String smsg = myID + " "+ msg;
 		InetAddress tmp = null;
 		int port = 0;
 		int i=0;
-		while(ul[i].pri_IP != null) {
+		while(ul[i] != null) {
 			try {
 				if(ul[i].pri_IP.getHostName().equals(InetAddress.getLocalHost().getHostName())) {
 					tmp = ul[i].pri_IP;
@@ -192,16 +218,18 @@ public class Send extends Thread{
 			}
 			i++;
 		}
-		String sql = "INSERT INTO " + user_list + "(id, chat) VALUES(?,?)";
-		PreparedStatement pstmt;
-		try {
-			pstmt = conn.prepareStatement(sql);
-			pstmt.setString(1, "나");
-			pstmt.setString(2, msg);
-			pstmt.executeUpdate();
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		if(!msg.equals("-1")) {
+			String sql = "INSERT INTO " + user_list + "(id, chat) VALUES(?,?)";
+			PreparedStatement pstmt;
+			try {
+				pstmt = conn.prepareStatement(sql);
+				pstmt.setString(1, "나");
+				pstmt.setString(2, msg);
+				pstmt.executeUpdate();
+			} catch (SQLException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	}
 	

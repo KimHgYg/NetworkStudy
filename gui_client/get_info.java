@@ -66,7 +66,6 @@ public class get_info {
 			return 1;
 		}
 		else {
-			
 			String url = "jdbc:sqlite:C:/sqlite/db/chat_log_" + ID + ".db";
 			try{
 				

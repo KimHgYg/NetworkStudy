@@ -8,15 +8,17 @@ import java.net.InetAddress;
 public class keep_alive extends Thread{
 	
 	private DatagramSocket sock;
-	private DatagramPacket p,r;
+	private DatagramPacket p;
 	private InetAddress ia;
 	private int port, n = 0;
 	private String s;
+	private Send send;
 	
-	public keep_alive(DatagramSocket sock, InetAddress ia, int port) {
+	public keep_alive(DatagramSocket sock, InetAddress ia, int port, Send send) {
 		this.sock = sock;
 		this.ia = ia;
 		this.port = port;
+		this.send = send;
 	}
 	
 	public void set_info(InetAddress ia, int port) {
@@ -25,17 +27,11 @@ public class keep_alive extends Thread{
 	}
 
 	public void run() {
-		s = "-1 " + ID;
-		byte[] buf = s.getBytes();
-		byte[] buf2 = new byte[100];
-		p = new DatagramPacket(buf, buf.length,ia,port);
-		r = new DatagramPacket(buf2, buf2.length);
+		
 		while(true) {
 			try {
-				sock.send(p);
+				send.send("-1");
 				sleep(3000);
-			} catch (IOException e) {
-				System.out.println("interrupted alive");
 			} catch(InterruptedException e) {
 				System.out.println("alive interrupted");
 			}

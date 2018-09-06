@@ -107,7 +107,8 @@ public class Receive extends Thread{
 								System.out.println("table create failed\n");
 							}
 							text.append("채팅 연결 완료\n");
-							chat.set_chat_log(opp_ID);
+							chat.set_chat_log(opp_ID, user_list);
+							chat.setName("Chatting with " + user_list);
 							flag_2 = true;
 							flag_1 = false;
 							send.set_send_on();

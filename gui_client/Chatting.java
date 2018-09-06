@@ -11,6 +11,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -22,6 +23,7 @@ public class Chatting extends JFrame{
 
 	private JTextArea text;
 	private JTextField my_text;
+	private JButton add;
 	private Connection conn;
 	
 	public Chatting(UDP_conn udp, Connection conn){
@@ -44,12 +46,16 @@ public class Chatting extends JFrame{
 		});
 		
 		chat.setLayout(new BorderLayout());
+		
 		JPanel pane = new JPanel();
 		pane.setLayout(new BorderLayout());
 		text = new JTextArea("채팅 시작!\n");
 		text.setSize(200, 300);
 		my_text = new JTextField();
 		my_text.setEditable(true);
+		
+		add = new JButton("Invite");
+		
 		text.setEditable(false);
 		JScrollPane bar = new JScrollPane(text);
 		bar.setPreferredSize(new Dimension(200, 300));
@@ -57,6 +63,7 @@ public class Chatting extends JFrame{
 		
 		pane.add(bar,"North");
 		pane.add(my_text, "South");
+		pane.add(add);
 		
 		chat.add(pane,"Center");
 		
@@ -64,8 +71,8 @@ public class Chatting extends JFrame{
 		setVisible(true);
 	}
 	
-	public void set_chat_log(String ID) {
-		String sql = "SELECT id, chat FROM " + ID;
+	public void set_chat_log(String ID, String user_list) {
+		String sql = "SELECT id, chat FROM " + user_list;
 		try {
 			Statement stmt = conn.createStatement();
 			ResultSet rs = stmt.executeQuery(sql);
@@ -84,5 +91,9 @@ public class Chatting extends JFrame{
 	
 	public JTextField get_mytextArea() {
 		return my_text;
+	}
+	
+	public JButton get_invite_button() {
+		return add;
 	}
 }

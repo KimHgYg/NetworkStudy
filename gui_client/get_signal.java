@@ -41,8 +41,8 @@ public class get_signal extends Thread{
 					tmp = byteTostring.split(" |\n");
 					System.out.println("got signal! " + tmp[0] + " " + tmp[1] + "  I'm this : " + sock.getLocalPort());
 					System.out.print(udp.index);
-					udp.not_Avail();
 					udp.UDP_ready(InetAddress.getByName(tmp[0]), Integer.parseInt(tmp[1]),InetAddress.getByName(tmp[2]),Integer.parseInt(tmp[3]), tmp[4], tmp[5]);
+					udp.not_Avail();
 				} catch(IOException e) {
 					continue;
 				} catch (InterruptedException e) {

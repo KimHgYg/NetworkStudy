@@ -29,9 +29,10 @@ public class UDP_conn extends JFrame{
 	private boolean group = false;
 	
 	private String public_IP;
-	
+
+	private int max_user = 10;
 	private user_list[] ul;
-	
+
 	private Send send;
 	private Receive rec;
 	private get_info gi;
@@ -45,12 +46,12 @@ public class UDP_conn extends JFrame{
 	//사용자가 움직여서 정보 바뀌었을 때는 어떻게 할지 생각
 	public UDP_conn(get_info gi, InetAddress ia, String ID, int index, Connection conn) throws SocketException {
 		sock = new DatagramSocket();
+		this.ul = new user_list[max_user];
 		this.server_ia = ia;
 		this.gi = gi;
 		this.ID = ID;
 		this.index = index;
 		this.conn = conn;
-		ul[0] = new user_list();
 		sock.setSoTimeout(5000);
 		gs = new get_signal(sock, this);
 		gs.start();
@@ -66,14 +67,19 @@ public class UDP_conn extends JFrame{
 		this.ia = ia;
 		if(avail == true) {
 			if(pia.getHostName().equals(InetAddress.getLocalHost().getHostName())) 
-				send = new Send(sock, pia, this, target_p_port, chat.get_textArea(), chat.get_mytextArea(), conn, ul);
+				send = new Send(gi, sock, pia, this, target_p_port, chat, conn, ul, ID);
 			else
-				send = new Send(sock, ia, this, target_port, chat.get_textArea(), chat.get_mytextArea(), conn, ul);
+				send = new Send(gi, sock, ia, this, target_port, chat, conn, ul, ID);
 			rec = new Receive(send, sock, this, chat.get_textArea(), conn, ul, chat);
+			send.insert_user_list(opp_ID, ia, pia, target_port, target_p_port);
 			this.start();
 			this.Wait();
 		}
-		send.insert_user_list(opp_ID, ia, pia, target_port, target_p_port);
+		else {
+			send.insert_user_list(opp_ID, ia, pia, target_port, target_p_port);
+			this.sig_Off();
+			group = true;
+		}
 		//chat.dispose();
 	}
 	//채팅 중 IP등 바뀔 때
@@ -111,7 +117,6 @@ public class UDP_conn extends JFrame{
 	public void update_port_to_server(PrintWriter out) {
 		//server udp port = 3002
 		if(this.avail) {
-			
 			try {
 				String private_info = InetAddress.getLocalHost().getHostAddress() + " " + sock.getLocalPort() + " " + index;
 				out.print('4');
@@ -171,5 +176,13 @@ public class UDP_conn extends JFrame{
 	public void Avail() {
 		this.avail = true;
 		gs.On();
+	}
+	
+	public void sig_On() {
+		gs.On();
+	}
+	
+	public void sig_Off() {
+		gs.Off();
 	}
 }
