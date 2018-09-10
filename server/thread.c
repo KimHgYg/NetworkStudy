@@ -125,12 +125,6 @@ void req(Arg *arg, char *ID) {
 					strcpy(oIP, row[0]); strcpy(oport, row[1]); strcpy(opIP, row[2]); strcpy(opport, row[3]); strcpy(oindex, row[4]);
 					sprintf(text, "%s %s %s %s %s %s\n", oIP, oport, opIP, opport, reqID, group_flag);
 					memset(query, 0x00, 150);
-					sprintf(query, "update client set available = \'0\' where ID = \'%s\' and IND = %s;", reqID, oindex);
-					if ((ret = mysql_query(conn, query)) != 0) {
-						printf("cannot disable port\n");
-						return (void)-1;
-					}
-					memset(query, 0x00, 150);
 					sprintf(query, "select IP, port, private_IP, private_port, IND from client where ID = \'%s\' and available = \'1\';", ID);
 					if ((ret = mysql_query(conn, query)) != 0) {
 						printf("Cannot select socket_number\n");
@@ -160,11 +154,6 @@ void req(Arg *arg, char *ID) {
 			printf("signal %s sent to %s %s\n", text, oIP, reqID);
 			sendto(udp_sock, text, strlen(text), 0, (struct sockaddr *)&client_udp, sizeof(struct sockaddr_in));
 			memset(query, 0x00, 150);
-			sprintf(query, "update client set available = \'0\' where ID = \'%s\' and IND = %s;", ID, index);
-			if (mysql_query(conn, query) != 0) {
-				printf("cannot disable port2\n");
-				return (void)-1;
-			}
 		}
 		else {
 			write(((Arg *)arg)->sock, "2\n", 2);
@@ -207,7 +196,7 @@ int client_stat(Arg *hb, char *ID) {
 			}
 			memset(query, 0x00, 150);
 			memset(text, 0x00, 30);
-			sprintf(text, "%s\n", inet_ntoa(hb->client_sock.sin_addr));
+			sprintf(text, "%s %d\n", inet_ntoa(hb->client_sock.sin_addr), ntohs(hb->client_sock.sin_port));
 			write(((Arg *)hb)->sock, text, strlen(text));
 		}
 		//error
@@ -242,6 +231,7 @@ void port_update(char *IP, char *ID) {
 	char pri_port[5] = "";
 	char query[200] = "";
 	char index[3];
+	char avail;
 	int port, ret;
 	int size = sizeof(struct sockaddr_in);
 	struct sockaddr_in client;
@@ -255,6 +245,7 @@ void port_update(char *IP, char *ID) {
 	strcpy(pri_IP, strtok(buf, " "));
 	strcpy(pri_port, strtok(NULL, " "));
 	strcpy(index, strtok(NULL, " "));
+	strcpy(&avail,strtok(NULL, " "));
 	port = ntohs(client.sin_port);
 	pthread_mutex_lock(&a_mutex);
 	memset(query, 0x00, 150);
@@ -280,6 +271,12 @@ void port_update(char *IP, char *ID) {
 	}
 	else {
 		printf("port update failed 2\n");
+	}
+	memset(query, 0x00, 150);
+	sprintf(query, "update client set available = \'%c\' where ID = \'%s\' and IND = \'%s\';",avail,ID,index);
+	if((ret = mysql_query(conn, query)) != 0){
+		printf("avail update failed\n");
+		return;
 	}
 	pthread_mutex_unlock(&a_mutex);
 }

@@ -6,7 +6,9 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
+import java.nio.channels.ClosedByInterruptException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -23,7 +25,7 @@ public class Receive extends Thread{
 	private byte[] bytemsg;
 	private Send send;
 	private String strmsg;
-	private boolean flag = true, flag_1 = true, flag_2 = false, Switch = true;
+	private boolean flag = true, flag_1 = true, flag_2 = false, Switch = false, group_flag;
 	private Scanner in;
 	private UDP_conn udp;
 	private JTextArea text;
@@ -47,7 +49,7 @@ public class Receive extends Thread{
 		this.text = text;
 	}*/
 	
-	public Receive(Send send, DatagramSocket sock, UDP_conn udp, JTextArea text, Connection conn, user_list[] ul, Chatting chat) {
+	public Receive(Send send, DatagramSocket sock, UDP_conn udp, JTextArea text, Connection conn, user_list[] ul, Chatting chat, boolean group_flag) {
 		this.sock = sock;
 		this.conn = conn;
 		this.chat = chat;
@@ -57,10 +59,15 @@ public class Receive extends Thread{
 		this.in= new Scanner(System.in);
 		this.udp = udp;
 		this.text = text;
+		this.group_flag = group_flag;
 	}
 	
 	public void run() {
 		int n = 1, k = 0;
+		if(group_flag) {
+			flag_1 = false;
+			flag_2 = true;
+		}
 		while(flag){
 			while(flag_1) {
 				bytemsg = new byte[10];
@@ -110,7 +117,7 @@ public class Receive extends Thread{
 							}
 							text.append("채팅 연결 완료\n");
 							chat.set_chat_log(opp_ID, user_list);
-							chat.setName("Chatting with " + user_list);
+							chat.setTitle("Chatting with " + user_list);
 							flag_2 = true;
 							flag_1 = false;
 							send.set_send_on();
@@ -131,16 +138,34 @@ public class Receive extends Thread{
 				}
 			}
 			while(flag_2) {
-				if(Switch) {
+				System.out.println(send.make_user_list());
+				if(true) {
 					bytemsg = new byte[100];
 					pack = new DatagramPacket(bytemsg, bytemsg.length);
 					try {
 						sock.receive(pack);
-					} catch (IOException e) {
+					} catch (SocketTimeoutException e) {
 						text.append("상대방이 떠났습니다");
 						text.setCaretPosition(text.getDocument().getLength());
 						this.interrupt();
 						break;
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+					if(Switch) {
+						Switch = false;
+						strmsg = new String(bytemsg);
+						if(strmsg.contains("-1"))
+							continue;
+						String[] tmp = strmsg.split(" |\n");
+						System.out.println(tmp[5]);
+						try {
+							udp.UDP_ready(InetAddress.getByName(tmp[0]), Integer.parseInt(tmp[1]),InetAddress.getByName(tmp[2]),Integer.parseInt(tmp[3]), tmp[4], tmp[5]);
+						} catch (NumberFormatException | IOException | InterruptedException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+						continue;
 					}
 					strmsg = (new String(bytemsg));
 					System.out.println("receive : " + strmsg);
@@ -161,9 +186,23 @@ public class Receive extends Thread{
 							Statement stmt = conn.createStatement();
 							stmt.execute(sql);
 							send.send("-4 " + udp.get_myID() + " " + udp.get_my_Public_IP() + " " + InetAddress.getLocalHost().getHostAddress()+ " " + Integer.toString(udp.get_my_Public_port()) + " " + Integer.toString(sock.getLocalPort()));
-						} catch (NumberFormatException | UnknownHostException | SQLException e) {
+						} catch (NumberFormatException | UnknownHostException e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
+						} catch (SQLException e) {
+							// TODO Auto-generated catch block
+							sql = "CREATE TABLE IF NOT EXISTS " + user_list + " (\n"
+									+ " id text NOT NULL,\n"
+									+ " chat text NOT NULL\n"
+									+ ");";
+							try {
+								java.sql.Statement stmt = conn.createStatement();
+								stmt.execute(sql);
+								System.out.println("table created222\n");
+							}catch (Exception e1) {
+								// TODO: handle exception
+								System.out.println("table create failed\n");
+							}
 						}
 						continue;
 					}
@@ -194,19 +233,11 @@ public class Receive extends Thread{
 			}
 		}
 	}
-	
-	public void Pause() {
-		Switch = false;
+	public void interrupt() {
+		Switch = true;
 	}
 	
 	public void Resume() {
-		Switch = true;
-		this.notifyAll();
-	}
-	
-	public void interrupt() {
-		flag = false;
-		flag_2 = false;
-		send.interrupt();
+		Switch = false;
 	}
 }

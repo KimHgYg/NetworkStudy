@@ -83,6 +83,7 @@ public class Chatting extends JFrame{
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
+		text.setCaretPosition(text.getDocument().getLength());
 	}
 	
 	public JTextArea get_textArea() {

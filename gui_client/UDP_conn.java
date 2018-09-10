@@ -60,31 +60,35 @@ public class UDP_conn extends JFrame{
 	
 	public void UDP_ready(InetAddress ia, int target_port,InetAddress pia, int target_p_port, String opp_ID, String group_flag) throws IOException, InterruptedException {
 		System.out.println("I'm "+ID);
-		
-		Chatting chat = new Chatting(this, conn);
 		this.target_port = target_port;
 		this.target_p_port = target_p_port;
 		this.pia = pia;
 		this.ia = ia;
+		if(group_flag.equals("true")) {
+			this.group = true;
+			//this.avail = false;
+		}
 		if(avail == true) {
+			this.avail = false;
+			Chatting chat = new Chatting(this, conn);
 			if(pia.getHostName().equals(InetAddress.getLocalHost().getHostName())) 
 				send = new Send(gi, sock, pia, this, target_p_port, chat, conn, ul, ID);
 			else
 				send = new Send(gi, sock, ia, this, target_port, chat, conn, ul, ID);
-			rec = new Receive(send, sock, this, chat.get_textArea(), conn, ul, chat);
+			rec = new Receive(send, sock, this, chat.get_textArea(), conn, ul, chat, group);
 			send.set_rec(rec);
 			send.insert_user_list(opp_ID, ia, pia, target_port, target_p_port);
 			this.start();
 			this.Wait();
 		}
 		else {
-			send.Resume();
+			//send.Resume();
 			System.out.println("resume 후");
 			send.send("-3 " + opp_ID + " " + ia.getHostAddress() + " " + pia.getHostAddress() + " " + Integer.toString(target_port) + " " + Integer.toString(target_p_port) );
 			System.out.println("-3 send 후");
 			send.insert_user_list(opp_ID, ia, pia, target_port, target_p_port);
 			send.send("-4 " + ID + " " + public_IP + " " + InetAddress.getLocalHost().getHostAddress()+ " " + Integer.toString(public_port) + " " + Integer.toString(sock.getLocalPort()));
-			this.sig_Off();
+			//this.sig_Off();
 			group = true;
 		}
 		//chat.dispose();
@@ -131,18 +135,25 @@ public class UDP_conn extends JFrame{
 	
 	public void update_port_to_server(PrintWriter out) {
 		//server udp port = 3002
-		if(this.avail) {
-			try {
-				String private_info = InetAddress.getLocalHost().getHostAddress() + " " + sock.getLocalPort() + " " + index;
-				out.print('4');
-				out.flush();
-				pack = new DatagramPacket(private_info.getBytes(), private_info.getBytes().length, InetAddress.getByName("52.79.185.101"), 3002); //서버 public IP주소
-				sock.send(pack);
-			} catch (UnknownHostException e) {
-				e.printStackTrace();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+		String private_info = null;
+		try {
+			if(this.avail)
+				private_info = InetAddress.getLocalHost().getHostAddress() + " " + sock.getLocalPort() + " " + index + " " + "1";
+			else
+				private_info = InetAddress.getLocalHost().getHostAddress() + " " + sock.getLocalPort() + " " + index + " " + "0";
+		}catch(UnknownHostException e) {
+			e.printStackTrace();
+		}
+		try {
+			//System.out.println(private_info);
+			out.print('4');
+			out.flush();
+			pack = new DatagramPacket(private_info.getBytes(), private_info.getBytes().length, InetAddress.getByName("52.79.185.101"), 3002); //서버 public IP주소
+			sock.send(pack);
+		} catch (UnknownHostException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
 	

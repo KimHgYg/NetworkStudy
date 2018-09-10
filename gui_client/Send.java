@@ -124,15 +124,16 @@ public class Send extends Thread{
 					gi.reqStat(name, "true");
 				}*/
 				//테스트용 완성 후 윗 코드로 대체할것
-				udp.sig_On();
 				//rec.Pause();
 				try{
-					rec.suspend();
+					rec.interrupt();
+					//udp.sig_On();
+					//rec.sleep(0);
 				}catch(Exception ex){
 					ex.printStackTrace();
 				}
 				//alive.Off();
-				gi.reqStat(name, "true");
+				//gi.reqStat(name, "true");
 			}
 		});
 	}
@@ -167,8 +168,8 @@ public class Send extends Thread{
 	}
 	
 	public void Resume() {
-		alive.On();
-		rec.resume();
+		//alive.On();
+		rec.Resume();
 	}
 	
 	public void set_send_on() {
@@ -190,8 +191,8 @@ public class Send extends Thread{
 	}
 	
 	public String make_user_list() {
-		String user_list = null;
-		int i = 0;
+		String user_list = ul[0].ID;
+		int i = 1;
 		while(true) {
 			if(ul[i]==null)
 				break;
