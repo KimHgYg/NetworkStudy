@@ -16,9 +16,8 @@ public class get_info {
 	private String ID, pswd;
 	
 	private static heartbeat hb;
-	private static UDP_conn[] udp;
+	private UDP_conn[] udp;
 	
-	private String serverIP;
 	private InetSocketAddress isa;
 	private InetAddress addr;
 	
@@ -33,7 +32,6 @@ public class get_info {
 		out = new PrintWriter(this.client.getOutputStream(),true);
 		
 		this.addr = addr;
-		this.serverIP = serverIP;
 		this.udp = new UDP_conn[10];
 	}
 	
@@ -52,7 +50,7 @@ public class get_info {
 		stat = Integer.parseInt(status);
 		if(stat==0) {
 			System.out.println("No account");
-		}
+		}	
 		else if(stat == 1) {
 			System.out.println("Wrong password");
 		}

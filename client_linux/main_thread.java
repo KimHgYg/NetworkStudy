@@ -1,17 +1,11 @@
 package client_linux;
 
-import java.io.IOException;
 import java.net.InetAddress;
-import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.Scanner;
 
 
 public class main_thread {
-	private static InetAddress name;
 	private static Scanner in;
-	private static Socket conn;
-	private static int port;
 	private static String ID;
 	private static int status;
 	
@@ -53,7 +47,6 @@ public class main_thread {
 				}
 				
 				else if(menu == 4) {
-					String IP = null;
 					System.out.println("원하는 ID를 입력하세요\n");
 					ID = in.nextLine();
 					gi.reqStat(ID);
